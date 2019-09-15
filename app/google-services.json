@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "47791962338",
+    "firebase_url": "https://fmapp-72f08.firebaseio.com",
+    "project_id": "fmapp-72f08",
+    "storage_bucket": "fmapp-72f08.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:47791962338:android:cc155deff3852f290886bb",
+        "android_client_info": {
+          "package_name": "com.example.fm"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "47791962338-v975nldvv821g5nvmlqcqkml7qd5385c.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.fm",
+            "certificate_hash": "ae947ce5ff4b780efb49a13190734552113261aa"
+          }
+        },
+        {
+          "client_id": "47791962338-ifieepbti6o19hqa0f0gt4bm65i9temq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXbZrFZMYhEfmruAQPswTI4HqerY48Klc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "47791962338-ifieepbti6o19hqa0f0gt4bm65i9temq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
