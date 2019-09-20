@@ -1,6 +1,6 @@
 package com.example.fm.retrofit;
 
-import com.example.fm.retrofit.requests.RequestSendPosition;
+import com.example.fm.retrofit.requests.ResponseToFcm;
 
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -10,8 +10,8 @@ import retrofit2.http.POST;
 
 public interface ApiFcm {
 
-    @Headers({"Authorization: key=AAAACyCfeOI:APA91bE4yyogyzWajjm7aPq4fJbd_xS36LXoJO9h6LbA2_KZa4VHbBF3LJhH4M9sRe3X_IAKWcyUU01v1WN7FuVyjUiF77XUms41Bh2O-1pr3VM_C5TOO7V8r_jR8vcXykZT4bRfSiEl",
+    @Headers({"Authorization: key=AAAA8QnanpM:APA91bFCQBcx9bsqtkKLoLut1s6ljUXuWXHUQ3EK5id70CgDQAWWLIcjHFKKr9bHH7yukANefSVP4AV8-_Iyswlm7fv7Rc5Xx3ApDStEVY4tuR0_j_oXz0eirjNKojGTL0yhBIC-OHay",
             "Content-Type:application/json"})
     @POST("fcm/send")
-    Call<ResponseBody> sendLocation(@Body RequestSendPosition requestSendPosition);
+    Call<ResponseBody> sendResponse(@Body ResponseToFcm responseToFcm);
 }
