@@ -28,6 +28,8 @@
             </intent-filter>
         </activity>
 
+        <service android:name=".services.LocationMonitoringService"/>
+
         <service
             android:name=".firebase.MyFirebaseMessagingService">
             <intent-filter>

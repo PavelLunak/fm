@@ -12,9 +12,9 @@ import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.media.RingtoneManager;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.IBinder;
-import android.os.Looper;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
@@ -23,7 +23,7 @@ import android.util.Log;
 
 import com.example.fm.MainActivity;
 import com.example.fm.R;
-import com.example.fm.objects.NewLocation;
+import com.example.fm.listeners.OnServiceBoundedListener;
 import com.example.fm.retrofit.ApiFcm;
 import com.example.fm.retrofit.ControllerFcm;
 import com.example.fm.retrofit.objects.ResponseToFcmData;
@@ -34,11 +34,6 @@ import com.example.fm.utils.AppConstants;
 import com.example.fm.utils.AppUtils;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
-import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.iid.InstanceIdResult;
@@ -56,11 +51,10 @@ import retrofit2.Response;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService implements AppConstants {
 
-    private FusedLocationProviderClient fusedLocationClient;
-    private LocationRequest mLocationRequest = new LocationRequest();
-    private LocationCallback mLocationCallback;
+    private float batteryPercentages;
 
     private boolean mBounded;
+    private OnServiceBoundedListener onServiceBoundedListener;
     private LocationMonitoringService mServiceNew;
 
     private BroadcastReceiver locacionReceiver;
@@ -68,8 +62,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
     private BroadcastReceiver serviceDestroyedReceiver;
     private BroadcastReceiver serviceStartetReceiver;
     private BroadcastReceiver serviceOnUnbindReceiver;
-
-    private NewLocation newLocation;
+    private BroadcastReceiver batteryStatusReceiver;
 
     private int requestType = 0;
     private String tokenForResponse = "";
@@ -93,8 +86,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
             mServiceNew = mLocalBinder.getService();
             mBounded = true;
             if (gpsIsStarted) mServiceNew.startGps();
+            if (onServiceBoundedListener != null) onServiceBoundedListener.onServiceBounded();
 
-            ResponseToFcmData responseToFcmData = new ResponseToFcmData(FCM_RESPONSE_SERVICE_START, "Služba je zapnuta.");
+            ResponseToFcmData responseToFcmData = new ResponseToFcmData(FCM_RESPONSE_SERVICE_START, "Služba je zapnuta.", "" + batteryPercentages);
             ResponseToFcm response = new ResponseToFcm(tokenForResponse, responseToFcmData);
             sendResponse(response);
         }
@@ -109,6 +103,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
         registerServiceDestroyedReceiver();
         registerServiceOnUnbindReceiver();
         registerServiceStartedReceiver();
+        registerBatteryReceiver();
     }
 
     @Override
@@ -119,6 +114,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
         unregisterServiceDestroyedReceiver();
         unregisterServiceOnUnbindReceiver();
         unregisterServiceStartetReceiver();
+        unregisterBatteryStatusReceiver();
     }
 
     @Override
@@ -178,7 +174,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
 
                     switch (requestType) {
                         case FCM_REQUEST_TYPE_SERVICE_STATUS:
-                            responseData = new ResponseToFcmData(serviceIsStarted ? FCM_RESPONSE_SERVICE_STATUS_STARTED : FCM_RESPONSE_SERVICE_STATUS_STOPED, "");
+                            boolean startet = isMyServiceRunning(LocationMonitoringService.class);
+                            responseData = new ResponseToFcmData(startet ? FCM_RESPONSE_SERVICE_STATUS_STARTED : FCM_RESPONSE_SERVICE_STATUS_STOPED, "", "" + batteryPercentages);
                             responseToFcm = new ResponseToFcm(tokenForResponse, responseData);
                             sendResponse(responseToFcm);
                             break;
@@ -190,13 +187,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                             break;
                         case FCM_REQUEST_TYPE_GPS_START:
                             startLocationWatcher();
-                            responseData = new ResponseToFcmData(FCM_RESPONSE_GPS_START, "Start GPS");
+                            responseData = new ResponseToFcmData(FCM_RESPONSE_GPS_START, "Start GPS", "" + batteryPercentages);
                             responseToFcm = new ResponseToFcm(tokenForResponse, responseData);
                             sendResponse(responseToFcm);
                             break;
                         case FCM_REQUEST_TYPE_GPS_STOP:
                             if (mServiceNew != null) mServiceNew.stopGps();
-                            responseData = new ResponseToFcmData(FCM_RESPONSE_GPS_STOP, "Stop GPS");
+                            responseData = new ResponseToFcmData(FCM_RESPONSE_GPS_STOP, "Stop GPS", "" + batteryPercentages);
                             responseToFcm = new ResponseToFcm(tokenForResponse, responseData);
                             sendResponse(responseToFcm);
                             break;
@@ -267,38 +264,59 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
             mServiceIntent = new Intent(this, mServiceNew.getClass());
             startService(mServiceIntent);
         }
-
-        bindService(new Intent(this, LocationMonitoringService.class), mConnection, BIND_AUTO_CREATE);
     }
 
     public void stopService() {
-        Log.i(TAG, "Start/Stop service from menu - serviceIsStarted == TRUE");
+        Log.i(TAG, "stopService()");
 
         gpsIsStarted = false;
 
-        if (mServiceNew != null) mServiceNew.setRequestStopService();
+        if (mServiceNew != null) {
+            Log.i(TAG, "stopService() - mServiceNew != null");
+            mServiceNew.setRequestStopService();
+        } else {
+            Log.i(TAG, "stopService() - mServiceNew == null -> nové připojení k service...");
+            bindService(new Intent(this, LocationMonitoringService.class), mConnection, BIND_AUTO_CREATE);
+
+            onServiceBoundedListener = new OnServiceBoundedListener() {
+                @Override
+                public void onServiceBounded() {
+                    Log.i(TAG, "stopService() - OnServiceBoundedListener - onServiceBounded()");
+                    mServiceNew.setRequestStopService();
+                    killService();
+                    onServiceBoundedListener = null;
+                    return;
+                }
+            };
+        }
+
+        killService();
+    }
+
+    public void killService() {
+        Log.i(TAG, "killService()");
 
         if (mConnection != null) {
             if (mBounded) {
                 try {
-                    Log.i(TAG, "Start/Stop service from menu - unbindService(mConnection)...");
+                    Log.i(TAG, "killService() - unbindService(mConnection)...");
                     unbindService(mConnection);
                 } catch (IllegalArgumentException e) {
-                    Log.i(TAG, "Start/Stop service from menu - unbindService(mConnection)... SELHALO");
+                    Log.i(TAG, "killService() - unbindService(mConnection)... SELHALO");
                     Log.i(TAG, e.getMessage());
                 }
             }
         } else {
-            Log.i(TAG, "Start/Stop service from menu - mConnection == null");
+            Log.i(TAG, "killService() - mConnection == null");
         }
 
         if (mServiceNew != null) {
             mServiceNew.stopSelf();
         } else {
-            Log.i(TAG, "Start/Stop service from menu - mServiceNew == NULL -> nemůžu dát požadavek na stop");
+            Log.i(TAG, "killService() - mServiceNew == NULL -> nemůžu dát požadavek na stop");
         }
 
-        Log.i(TAG, "Start/Stop service from menu - is running : " + isMyServiceRunning(LocationMonitoringService.class));
+        Log.i(TAG, "killService() - is service running : " + isMyServiceRunning(LocationMonitoringService.class));
     }
 
     public void startLocationWatcher() {
@@ -393,6 +411,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                     ResponseToFcmDataLocation responseDataLocation = new ResponseToFcmDataLocation(
                             FCM_RESPONSE_TYPE_LOCATION,
                             "",
+                            "" + batteryPercentages,
                             "" + location.getLatitude(),
                             "" + location.getLongitude(),
                             "" + location.getAccuracy(),
@@ -433,7 +452,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                 mServiceNew = null;
                 serviceIsStarted = false;
 
-                ResponseToFcmData responseToFcmData = new ResponseToFcmData(FCM_RESPONSE_SERVICE_STOP, "Služba je vypnuta.");
+                ResponseToFcmData responseToFcmData = new ResponseToFcmData(FCM_RESPONSE_SERVICE_STOP, "Služba je vypnuta.", "" + batteryPercentages);
                 ResponseToFcm response = new ResponseToFcm(tokenForResponse, responseToFcmData);
                 sendResponse(response);
             }
@@ -451,7 +470,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                 AppUtils.appendLog("ServiceStartetReceiver - onReceive()");
                 serviceIsStarted = true;
 
-                ResponseToFcmData responseData = new ResponseToFcmData(FCM_RESPONSE_SERVICE_START, "");
+                ResponseToFcmData responseData = new ResponseToFcmData(FCM_RESPONSE_SERVICE_START, "", "" + batteryPercentages);
                 ResponseToFcm responseToFcm = new ResponseToFcm(tokenForResponse, responseData);
                 sendResponse(responseToFcm);
             }
@@ -473,6 +492,20 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
         };
 
         LocalBroadcastManager.getInstance(this).registerReceiver(serviceOnUnbindReceiver, new IntentFilter(ACTION_ON_UNBIND_SERVICE));
+    }
+
+    private void registerBatteryReceiver() {
+        batteryStatusReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                Log.i(TAG, "batteryStatusReceiver - onReceive()");
+                int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+                batteryPercentages = level / (float)scale;
+            }
+        };
+
+        LocalBroadcastManager.getInstance(this).registerReceiver(serviceStartetReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
     }
 
     private void unregisterLocationReceiver() {
@@ -522,6 +555,16 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
             LocalBroadcastManager.getInstance(this).unregisterReceiver(serviceOnUnbindReceiver);
         } catch (IllegalArgumentException e) {
             Log.i(TAG, "serviceOnUnbindReceiver(): " + e.getMessage());
+        }
+    }
+
+    private void unregisterBatteryStatusReceiver() {
+        Log.i(TAG, "unregisterBatteryStatusReceiver()");
+
+        try {
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(batteryStatusReceiver);
+        } catch (IllegalArgumentException e) {
+            Log.i(TAG, "unregisterBatteryStatusReceiver(): " + e.getMessage());
         }
     }
 

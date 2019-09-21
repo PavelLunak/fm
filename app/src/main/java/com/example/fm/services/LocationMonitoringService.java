@@ -186,7 +186,7 @@ public class LocationMonitoringService extends Service implements
     }
 
     public void setRequestStopService() {
-        Log.i(TAG, "LocationMonitoringService - Požadavek z UI na zastavení service");
+        Log.i(TAG, "LocationMonitoringService - setRequestStopService()");
         isStopRequestFromUI = true;
         if (fusedLocationClient != null) fusedLocationClient.removeLocationUpdates(mLocationCallback);
     }

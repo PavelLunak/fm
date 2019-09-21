@@ -34,8 +34,8 @@ public interface AppConstants {
     int FCM_RESPONSE_GPS_START = 15;
     int FCM_RESPONSE_GPS_STOP = 16;
     int FCM_RESPONSE_TYPE_LOCATION = 17;
-    int FCM_RESPONSE_TYPE_MESSAGE = 18;
-    int FCM_RESPONSE_TYPE_MESSAGE_ERROR = 19;
+
+    int FCM_INFO_BATTERY = 21;
 
     String KEY_RESPONSE_TYPE = "key_response_type";
     String KEY_RESPONSE_SERVICE_STATUS = "key_service_status";
