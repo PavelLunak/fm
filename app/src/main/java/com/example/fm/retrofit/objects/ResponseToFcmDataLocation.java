@@ -4,6 +4,7 @@ public class ResponseToFcmDataLocation extends ResponseToFcmData {
 
     private String latitude;
     private String longitude;
+    private String speed;
     private String accuracy;
     private String date;
 
@@ -14,6 +15,7 @@ public class ResponseToFcmDataLocation extends ResponseToFcmData {
             String battery,
             String latitude,
             String longitude,
+            String speed,
             String accuracy,
             String date) {
 
@@ -21,6 +23,7 @@ public class ResponseToFcmDataLocation extends ResponseToFcmData {
 
         this.latitude = latitude;
         this.longitude = longitude;
+        this.speed = speed;
         this.accuracy = accuracy;
         this.date = date;
     }

@@ -17,7 +17,7 @@ public class ResponseToFcm {
         this.to = to;
         this.collapse_key = "type_a";
         this.priority = "high";
-        this.time_to_live = 60;
+        this.time_to_live = 10;
         this.data = data;
     }
 
