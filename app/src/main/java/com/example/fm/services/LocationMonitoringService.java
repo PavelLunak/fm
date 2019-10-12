@@ -30,6 +30,8 @@ import com.example.fm.retrofit.responses.ResponseSendPositionsIntoDatabase;
 import com.example.fm.utils.AppConstants;
 import com.example.fm.utils.AppUtils;
 import com.example.fm.utils.DateTimeUtils;
+import com.example.fm.utils.FcmManager;
+import com.example.fm.utils.PrefsUtils;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -62,13 +64,11 @@ public class LocationMonitoringService extends Service implements
     boolean isStopRequestFromUI = false;
     NewLocation newLocation;
 
-    boolean gpsIsRunning = false;
-
     //Nastaví se na TRUE, pokud přijde požadavek na zobrazení aktuální polohy za běhu sledování polohy,
     //aby po získání aktuální polohy nedošlo k zastavení sledování
-    boolean gpsIsRunningBeforeMapRequest = false;
+    //boolean gpsIsRunningBeforeMapRequest = false;
 
-    float batteryPercentages;
+    int batteryPercentages;
     ArrayList<PositionChecked> autoSaveBuffer;
     ArrayList<PositionChecked> autoCheckedPositions;
 
@@ -93,7 +93,7 @@ public class LocationMonitoringService extends Service implements
 
     //NUTNO NASTAVIT Z VENČÍ
     boolean savingToDatabaseEnabled;
-    long autoCheckedPositionSavingInterval = 1 * 60 * 1000;
+    long autoCheckedPositionSavingInterval = AppConstants.LOCATION_DEFAULT_INTERVAL;
     int maxCountOfLocationChecked = -1;
     long positionInterval = LOCATION_DEFAULT_INTERVAL;
 
@@ -122,8 +122,7 @@ public class LocationMonitoringService extends Service implements
         AppUtils.appendLog("*** LocationMonitoringService - onStartCommand() ***");
         LocalBroadcastManager.getInstance(this).sendBroadcast(new Intent(ACTION_START_SERVICE));
 
-        Log.i(TAG, "LocationMonitoringService - onStartCommand() : gpsIsRunning == " + gpsIsRunning);
-        if (!gpsIsRunning) startGps();
+        Log.i(TAG, "LocationMonitoringService - onStartCommand() : gpsIsRunning == " + PrefsUtils.getPrefsGpsStatus(this));
 
         //Make it stick to the notification panel so it is less prone to get cancelled by the Operating System.
         return START_STICKY;
@@ -134,8 +133,7 @@ public class LocationMonitoringService extends Service implements
     public IBinder onBind(Intent intent) {
         AppUtils.appendLog("*** LocationMonitoringService - onBind() ***");
 
-        Log.i(TAG, "LocationMonitoringService - onBind() : gpsIsRunning == " + gpsIsRunning);
-        if (!gpsIsRunning) startGps();
+        Log.i(TAG, "LocationMonitoringService - onBind() : gpsIsRunning == " + PrefsUtils.getPrefsGpsStatus(this));
 
         return mBinder;
     }
@@ -195,7 +193,7 @@ public class LocationMonitoringService extends Service implements
                 location.getAccuracy(),
                 batteryPercentages);
 
-        this.resultForRequestActualLocation = new ResultForRequestActualLocation(newLocation, null);
+        //this.resultForRequestActualLocation = new ResultForRequestActualLocation(newLocation, null);
         this.lastCheckedPositionTime = new Date().getTime();
 
         Log.i(TAG, "LocationMonitoringService - onLocationChanged() - accuracy: " + this.newLocation.getAccuracy());
@@ -205,6 +203,7 @@ public class LocationMonitoringService extends Service implements
         Log.i(TAG, "LocationMonitoringService - onLocationChanged() - battery: " + this.newLocation.getBatteryStatus());
 
         if (onlyGivenNumberOfPositions) {
+            Log.i(TAG, "POUZE UČENÝ POČET POLOH == TRUE");
             if (tempLocations == null) tempLocations = new ArrayList<>();
             tempLocations.add(newLocation);
 
@@ -214,7 +213,7 @@ public class LocationMonitoringService extends Service implements
             return;
         }
 
-        savingToDatabaseEnabled = MainActivity.appPrefs.savingToDatabaseEnabled().get();
+        savingToDatabaseEnabled = PrefsUtils.getPrefsDatabaseEnabled(this);
 
         Log.i(TAG, "savingToDatabaseEnabled : " + savingToDatabaseEnabled);
         Log.i(TAG, "isSavingDataToExternalDatabase : " + isSavingDataToExternalDatabase);
@@ -249,7 +248,7 @@ public class LocationMonitoringService extends Service implements
 
         AppUtils.appendLog("*** LocationMonitoringService - startGps() ***");
 
-        this.positionInterval = MainActivity.appPrefs.positionInterval().getOr(AppConstants.LOCATION_DEFAULT_INTERVAL);
+        this.positionInterval = PrefsUtils.getPrefsLocationInterval(this);
         if (this.positionInterval < AppConstants.LOCATION_DEFAULT_INTERVAL) this.positionInterval = AppConstants.LOCATION_DEFAULT_INTERVAL;
 
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -259,7 +258,7 @@ public class LocationMonitoringService extends Service implements
             }
         }
 
-        gpsIsRunning = true;
+        PrefsUtils.updatePrefsGpsStatus(this,true);
 
         mLocationRequest.setInterval(positionInterval);
         mLocationRequest.setFastestInterval(positionInterval);
@@ -282,10 +281,10 @@ public class LocationMonitoringService extends Service implements
 
     public void stopGps() {
         AppUtils.appendLog("*** LocationMonitoringService - stopGps() ***");
+        PrefsUtils.updatePrefsGpsStatus(this, false);
 
         if (fusedLocationClient != null) {
             fusedLocationClient.removeLocationUpdates(mLocationCallback);
-            gpsIsRunning = false;
         } else {
             Log.i(TAG, "stopGps() : fusedLocationClient == null");
         }
@@ -352,7 +351,7 @@ public class LocationMonitoringService extends Service implements
     //Pokud ano, přidá novou polohu do seznamu zjištěných poloh a vrátí TRUE.
     //Pokud ne, nic nepřidá a vrátí FALSE
     private boolean checkTimeIntervalForSavePositionToDatabase() {
-        autoCheckedPositionSavingInterval = MainActivity.appPrefs.autoCheckedPositionSavingInterval().get();
+        autoCheckedPositionSavingInterval = PrefsUtils.getPrefsLocationsAutoCheckedInterval(this);
         if (autoCheckedPositionSavingInterval == 0) autoCheckedPositionSavingInterval = 10000;
 
         long time = new Date().getTime();
@@ -377,7 +376,7 @@ public class LocationMonitoringService extends Service implements
     }
 
     private boolean checkMaxCountOfLocations() {
-        maxCountOfLocationChecked = MainActivity.appPrefs.maxCountOfLocationChecked().get();
+        maxCountOfLocationChecked = PrefsUtils.getPrefsMaxCountOfCheckedLocations(this);
 
         if (maxCountOfLocationChecked == 0) return true;
         if (maxCountOfLocationChecked == COUNT_OF_LOCATIONS_INFINITY) return true;
@@ -604,14 +603,13 @@ public class LocationMonitoringService extends Service implements
                 Log.i(TAG, "LocationMonitoringService - OnGivenLocationsCheckedListener - onGivenLocationsChecked()");
 
                 onlyGivenNumberOfPositions = false;
-
                 NewLocation loc = getBestAccuracyLocation(LocationMonitoringService.this.tempLocations) ;
 
-                if (loc != null) resultForRequestActualLocation = new ResultForRequestActualLocation(loc, null);
-                else resultForRequestActualLocation = new ResultForRequestActualLocation(null, "Nepodařilo se získat aktuální polohu zařízení.");
+                if (loc != null) FcmManager.sendResponseLocation(loc, batteryPercentages);
+                else FcmManager.sendMessage("Získaná poloha == NULL", batteryPercentages, MainActivity.tokenTest);
 
                 stopGps();
-                positionInterval = MainActivity.appPrefs.positionInterval().getOr(AppConstants.LOCATION_DEFAULT_INTERVAL);
+                positionInterval = PrefsUtils.getPrefsLocationInterval(LocationMonitoringService.this);
 
                 //TODO dovymyslet jak zjistit, že GPS bežela před požadavkem na aktuální polohu
                 //aktuálně, po vyžádání aktuální polohy, dojde k vypnutí GPS v každém případě
@@ -626,7 +624,7 @@ public class LocationMonitoringService extends Service implements
 
 
 
-                gpsIsRunningBeforeMapRequest = false;
+                //gpsIsRunningBeforeMapRequest = false;
 
                 Intent intent;
 
@@ -640,30 +638,31 @@ public class LocationMonitoringService extends Service implements
                     LocalBroadcastManager.getInstance(LocationMonitoringService.this).sendBroadcast(intent);
                 }
 
-                tempLocations = null;
+                LocationMonitoringService.this.tempLocations = null;
             }
         };
 
-        if (gpsIsRunning) gpsIsRunningBeforeMapRequest = true;
+        //if (PrefsUtils.getPrefsGpsStatus(this)) gpsIsRunningBeforeMapRequest = true;
         onlyGivenNumberOfPositions = true;
 
         //Zjistim, jestli poslední uložená poloha není mladší než nastavený čas.
         //Pokud bude mladší, neprovede se nic.
         //Pokud bude starší, vypnu GPS, dočasně přenastavím interval příjmu poloh a zapnu GPS.
-        if (lastCheckedPositionTime > AppConstants.MAX_AGE_OF_LOCATION) {
+        if ((new Date().getTime() - lastCheckedPositionTime) > AppConstants.MAX_AGE_OF_LOCATION) {
             if (positionInterval > AppConstants.LOCATION_DEFAULT_INTERVAL) {
-                if (gpsIsRunning) stopGps();
+                if (PrefsUtils.getPrefsGpsStatus(this)) stopGps();
                 positionInterval = AppConstants.LOCATION_DEFAULT_INTERVAL;
                 startGps();
             }
         }
 
-        if (!gpsIsRunning) {
-            Intent intent;
-            intent = new Intent(ACTION_MESSAGE);
-            intent.putExtra(KEY_MESSAGE, "Chyba : gpsIsRunning == FALSE");
-            LocalBroadcastManager.getInstance(LocationMonitoringService.this).sendBroadcast(intent);
+        if (positionInterval > AppConstants.LOCATION_DEFAULT_INTERVAL) {
+            if (PrefsUtils.getPrefsGpsStatus(this)) stopGps();
+            positionInterval = AppConstants.LOCATION_DEFAULT_INTERVAL;
+            startGps();
         }
+
+        if (!PrefsUtils.getPrefsGpsStatus(this)) startGps();
     }
 
     public ResultForRequestActualLocation getActualLocationResult() {

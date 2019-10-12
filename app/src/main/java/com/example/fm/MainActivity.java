@@ -41,6 +41,9 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
     @Pref
     public static AppPrefs_ appPrefs;
 
+    @InstanceState
+    public static String tokenTest;
+
     RelativeLayout root;
     TextView label;
 

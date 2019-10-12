@@ -39,6 +39,8 @@ import com.example.fm.retrofit.requests.ResponseToFcm;
 import com.example.fm.services.LocationMonitoringService;
 import com.example.fm.utils.AppConstants;
 import com.example.fm.utils.AppUtils;
+import com.example.fm.utils.FcmManager;
+import com.example.fm.utils.PrefsUtils;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -74,8 +76,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
     private String tokenForResponse = "";
 
     boolean serviceIsStarted,
-            gpsIsStarted,
+            //gpsIsStarted,
             isRequestLocation,
+            isRequestStartGps,
+            isRequestStopGps,
             isRequestLocationResult,
             isRequestKillService;
 
@@ -102,21 +106,44 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
             mServiceNew = mLocalBinder.getService();
             mBounded = true;
 
-            if (isRequestLocation) {
+            if (isRequestStartGps) {
+                AppUtils.appendLog("MyFirebaseMessagingService - onServiceConnected() : isRequestStartGps");
+
+                if (mServiceNew != null) mServiceNew.startGps();
+                else Log.i(TAG, "mServiceNew == null");
+
+                isRequestStartGps = false;
+                sendServiceStatus();
+            } else if (isRequestStopGps) {
+                AppUtils.appendLog("MyFirebaseMessagingService - onServiceConnected() : isRequestStopGps");
+
+                if (mServiceNew != null) mServiceNew.stopGps();
+                else Log.i(TAG, "mServiceNew == null");
+
+                isRequestStopGps = false;
+                sendServiceStatus();
+            } else if (isRequestLocation) {
                 AppUtils.appendLog("MyFirebaseMessagingService - onServiceConnected() : isRequestLocation");
                 if (mServiceNew != null) mServiceNew.getActualLocation(REQUIRED_NUMBER_OF_LOCATIONS);
                 else Log.i(TAG, "mServiceNew == null");
                 isRequestLocation = false;
             } else if (isRequestLocationResult) {
+                /*
                 AppUtils.appendLog("MyFirebaseMessagingService - onServiceConnected() : isRequestLocationResult");
 
                 if (mServiceNew != null) {
+                    Log.i(TAG, mServiceNew.getActualLocationResult().getActualLocation().toString());
                     ResultForRequestActualLocation result = mServiceNew.getActualLocationResult();
+
+                    if (result == null) {
+                        sendMessage("ResultForRequestActualLocation == NULL");
+                        return;
+                    }
 
                     if (result.getMessage() != null) {
                         sendMessage(result.getMessage());
                     } else {
-                        if (result.getMessage() != null) {
+                        if (result.getMessage() == null) {
                             ResponseToFcmDataLocation responseDataLocation = new ResponseToFcmDataLocation(
                                     FCM_RESPONSE_TYPE_LOCATION,
                                     "",
@@ -138,7 +165,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                 }
 
                 isRequestLocationResult = false;
-            }else if (isRequestKillService) {
+                */
+            } else if (isRequestKillService) {
                 AppUtils.appendLog("MyFirebaseMessagingService - onServiceConnected() : isRequestKillService");
                 mServiceNew.setRequestStopService();
                 killService();
@@ -211,7 +239,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
             @Override
             public void onSuccess(InstanceIdResult instanceIdResult) {
                 String newToken = instanceIdResult.getToken();
-                MainActivity.appPrefs.edit().fcmToken().put(newToken).apply();
+                PrefsUtils.updatePrefsToken(MyFirebaseMessagingService.this, newToken);
                 Log.i(TAG, "new token: " + newToken);
             }
         });
@@ -242,8 +270,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                         return;
                     }
 
-                    if (data.containsKey(KEY_TOKEN_FOR_RESPONSE))
-                        tokenForResponse = data.get(KEY_TOKEN_FOR_RESPONSE);
+                    if (data.containsKey(KEY_TOKEN_FOR_RESPONSE)) tokenForResponse = data.get(KEY_TOKEN_FOR_RESPONSE);
+                    MainActivity.tokenTest = tokenForResponse;
 
                     Log.i(TAG, "requestType: " + AppUtils.requestTypeToString(requestType));
                     Log.i(TAG, "tokenForResponse: " + tokenForResponse);
@@ -265,18 +293,53 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                             stopService();
                             //stopLocationWatcher();
                             break;
-                        case FCM_REQUEST_TYPE_LOCATION:
+                        case FCM_REQUEST_TYPE_GPS_START:
                             if (!AppUtils.isLocationEnabled(this)) {
                                 sendServiceStatus();
                                 sendMessage("Na zařízení není povolen přístup k poloze.");
                                 return;
                             }
 
-                            //MainActivity.appPrefs.edit().requestLocation().put(true).apply();
+                            if (isMyServiceRunning(LocationMonitoringService.class, "MyFirebaseMessagingService - onMessageReceived()")) {
+                                if (!mBounded) {
+                                    try {
+                                        isRequestStartGps = true;
+                                        bindService(new Intent(this, LocationMonitoringService.class), mConnection, BIND_AUTO_CREATE);
+                                    } catch (IllegalArgumentException e) {
+                                        Log.i(TAG, "Nepodařilo se připojit ke službě: " + e.getMessage());
+                                    }
+                                }
+                            } else {
+                                isRequestStartGps = true;
+                                startService();
+                            }
+                            break;
+                        case FCM_REQUEST_TYPE_GPS_STOP:
+                            if (!AppUtils.isLocationEnabled(this)) {
+                                sendServiceStatus();
+                                sendMessage("Na zařízení není povolen přístup k poloze.");
+                                return;
+                            }
 
-                            Log.i(TAG, mServiceNew == null ? "mServiceNew == null" : "mServiceNew != null");
-                            Log.i(TAG, mBounded ? "mBounded == TRUE" : "mBounded == FALSE");
-                            Log.i(TAG, "+++++++++++++++++++++++++++++++++++++");
+                            if (isMyServiceRunning(LocationMonitoringService.class, "MyFirebaseMessagingService - onMessageReceived()")) {
+                                if (!mBounded) {
+                                    try {
+                                        isRequestStopGps = true;
+                                        bindService(new Intent(this, LocationMonitoringService.class), mConnection, BIND_AUTO_CREATE);
+                                    } catch (IllegalArgumentException e) {
+                                        Log.i(TAG, "Nepodařilo se připojit ke službě: " + e.getMessage());
+                                    }
+                                }
+                            } else {
+                                Log.i(TAG, "Služba neběží, neběží tedy ani GPS - není co vypnout.");
+                            }
+                            break;
+                        case FCM_REQUEST_TYPE_LOCATION:
+                            if (!AppUtils.isLocationEnabled(this)) {
+                                sendServiceStatus();
+                                sendMessage("Na zařízení není povolen přístup k poloze.");
+                                return;
+                            }
 
                             if (isMyServiceRunning(LocationMonitoringService.class, "MyFirebaseMessagingService - onMessageReceived()")) {
                                 if (!mBounded) {
@@ -293,6 +356,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                             }
                             break;
                         case FCM_REQUEST_TYPE_LOCATION_RESULT:
+                            /*
                             if (isMyServiceRunning(LocationMonitoringService.class, "MyFirebaseMessagingService - onMessageReceived()")) {
                                 if (!mBounded) {
                                     try {
@@ -306,6 +370,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                                 isRequestLocationResult = true;
                                 startService();
                             }
+                            */
                             break;
                         case FCM_REQUEST_TYPE_SETTINGS_DATABASE:
                             SharedPreferences sharedpreferences = this.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
@@ -320,6 +385,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                                     editor.putInt("maxCountOfLocationChecked", Integer.parseInt(data.get("maxCountOfLocationChecked")));
                                 if (data.containsKey("timeUnit"))
                                     editor.putInt("timeUnit", Integer.parseInt(data.get("timeUnit")));
+                                if (data.containsKey("locationsInterval"))
+                                    editor.putLong("locationsInterval", Long.parseLong(data.get("locationsInterval")));
+                                if (data.containsKey("locationsIntervalTimeUnit"))
+                                    editor.putInt("locationsIntervalTimeUnit", Integer.parseInt(data.get("locationsIntervalTimeUnit")));
                                 editor.commit();
 
                                 responseData = new ResponseToFcmData(FCM_RESPONSE_TYPE_SETTINGS_DATABASE_SAVED, "Nové nastavení uloženo.", "" + batteryPercentages);
@@ -346,10 +415,11 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                                     sp.getBoolean(KEY_DB_ENABLED, false) ? 1 : 0,
                                     sp.getLong(KEY_SAVE_INTERVAL, -1),
                                     sp.getInt(KEY_MAX_COUNT_LOC_SAVE, -1),
-                                    sp.getInt(KEY_TIME_UNIT, TIME_UNIT_SECONDS));
+                                    sp.getInt(KEY_TIME_UNIT, TIME_UNIT_SECONDS),
+                                    sp.getLong(KEY_LOCATIONS_INTERVAL, -1),
+                                    sp.getInt(KEY_LOCATIONS_INTERVAL_TIME_UNIT, TIME_UNIT_SECONDS));
 
-                            responseToFcm = new ResponseToFcm(tokenForResponse, responseData);
-                            sendResponse(responseToFcm);
+                            FcmManager.sendResponse(new ResponseToFcm(tokenForResponse, responseData));
                             break;
                         case FCM_REQUEST_TYPE_ALARM:
                             playAlarm();
@@ -449,7 +519,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                 try {
                     Log.i(TAG, "killService() - unbindService(mConnection)...");
                     unbindService(mConnection);
-                    gpsIsStarted = false;
+                    PrefsUtils.updatePrefsGpsStatus(this, false);
                 } catch (IllegalArgumentException e) {
                     Log.i(TAG, "killService() - unbindService(mConnection)... SELHALO");
                     Log.i(TAG, e.getMessage());
@@ -475,14 +545,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
         if (isGooglePlayServicesAvailable()) {
             if (checkPermissions()) {
 
-                //registerLocationReceiver();
-
-                if (gpsIsStarted) {
+                if (PrefsUtils.getPrefsGpsStatus(this)) {
                     Log.i(TAG, "FirebaseMessagingService - startLocationWatcher() : GPS již běží, nebudu znova zapínat...");
                     return;
                 }
-
-                gpsIsStarted = true;
 
                 if (!isMyServiceRunning(LocationMonitoringService.class, "FirebaseMessagingService - startLocationWatcher()")) {
                     Log.i(TAG, "FirebaseMessagingService - startLocationWatcher() - isMyServiceRunning == FALSE -> go start");
@@ -517,7 +583,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
 
         if (mServiceNew != null) {
             mServiceNew.stopGps();
-            gpsIsStarted = false;
+            //gpsIsStarted = false;
         }
     }
 
@@ -611,7 +677,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
             @Override
             public void onReceive(Context context, Intent intent) {
                 AppUtils.appendLog("MyFirebaseMessagingService - RestartServiceReceiver - onReceive()");
-                if (gpsIsStarted) startLocationWatcher();
+                if (PrefsUtils.getPrefsGpsStatus(MyFirebaseMessagingService.this)) startLocationWatcher();
             }
         };
 
@@ -658,7 +724,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
             public void onReceive(Context context, Intent intent) {
                 AppUtils.appendLog("MyFirebaseMessagingService - ServiceStartetReceiver - onReceive()");
                 mBounded = false;
-                gpsIsStarted = false;
+                //gpsIsStarted = false;
             }
         };
 
@@ -875,13 +941,16 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
 
     private void sendServiceStatus() {
         boolean serviceStartet = isMyServiceRunning(LocationMonitoringService.class, "MyFirebaseMessagingService - sendServiceStatus()");
+        if (!serviceStartet) PrefsUtils.updatePrefsGpsStatus(this, false);
+
+        boolean gpsStarted = PrefsUtils.getPrefsGpsStatus(this);
 
         ResponseToFcmData responseData = new ResponseToFcmDataServiceStatus(
                 FCM_RESPONSE_SERVICE_STATUS,
                 prepareResponseMessage(),
                 "" + batteryPercentages,
                 serviceStartet ? STARTED : STOPED,
-                gpsIsStarted ? STARTED : STOPED);
+                gpsStarted ? STARTED : STOPED);
 
         ResponseToFcm responseToFcm = new ResponseToFcm(tokenForResponse, responseData);
         sendResponse(responseToFcm);

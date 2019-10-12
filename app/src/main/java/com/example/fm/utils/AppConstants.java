@@ -57,6 +57,8 @@ public interface AppConstants {
     String KEY_DB_ENABLED = "savingToDatabaseEnabled";
     String KEY_SAVE_INTERVAL = "autoCheckedPositionSavingInterval";
     String KEY_TIME_UNIT = "timeUnit";
+    String KEY_LOCATIONS_INTERVAL = "locationsInterval";
+    String KEY_LOCATIONS_INTERVAL_TIME_UNIT = "locationsIntervalTimeUnit";
     String KEY_MAX_COUNT_LOC_SAVE = "maxCountOfLocationChecked";
     String KEY_SERVICE_STATUS = "service_status";
     String KEY_GPS_STATUS = "gps_status";
@@ -70,7 +72,7 @@ public interface AppConstants {
 
     int COUNT_OF_LOCATIONS_INFINITY = -2;
     long MAX_TIME_BEFORE_BIND_TO_SERVICE = 300000;
-    int REQUIRED_NUMBER_OF_LOCATIONS = 5;
+    int REQUIRED_NUMBER_OF_LOCATIONS = 3;
 
     int SAVING_INTO_EXTERNAL_DB_RESULT_FAILURE = 1;
     int SAVING_INTO_EXTERNAL_DB_RESULT_SUCCES = 2;

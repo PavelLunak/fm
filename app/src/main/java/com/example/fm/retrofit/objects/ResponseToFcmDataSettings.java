@@ -6,6 +6,8 @@ public class ResponseToFcmDataSettings extends ResponseToFcmData {
     private long autoCheckedPositionSavingInterval;
     private int maxCountOfLocationChecked;
     private int timeUnit;
+    private long locationsInterval;
+    private int locationsIntervalTimeUnit;
 
 
     public ResponseToFcmDataSettings(
@@ -15,12 +17,16 @@ public class ResponseToFcmDataSettings extends ResponseToFcmData {
             int savingToDatabaseEnabled,
             long autoCheckedPositionSavingInterval,
             int maxCountOfLocationChecked,
-            int timeUnit) {
+            int timeUnit,
+            long locationsInterval,
+            int locationsIntervalTimeUnit) {
 
         super(responseType, message, battery);
         this.savingToDatabaseEnabled = savingToDatabaseEnabled;
         this.autoCheckedPositionSavingInterval = autoCheckedPositionSavingInterval;
         this.maxCountOfLocationChecked = maxCountOfLocationChecked;
         this.timeUnit = timeUnit;
+        this.locationsInterval = locationsInterval;
+        this.locationsIntervalTimeUnit = locationsIntervalTimeUnit;
     }
 }
