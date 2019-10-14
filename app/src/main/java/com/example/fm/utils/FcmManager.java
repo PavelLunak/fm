@@ -64,21 +64,23 @@ public class FcmManager implements AppConstants {
         });
     }
 
-    public static void sendMessage(String message, int batteryPercentages, String tokenForResponse) {
+    public static void sendMessage(String message, int batteryPercentages, int batteryPlugged, String tokenForResponse) {
         ResponseToFcmData responseToFcmData = new ResponseToFcmData(
                 FCM_RESPONSE_TYPE_MESSAGE,
                 message,
-                "" + batteryPercentages);
+                "" + batteryPercentages,
+                batteryPlugged);
 
         ResponseToFcm response = new ResponseToFcm(tokenForResponse, responseToFcmData);
         sendResponse(response);
     }
 
-    public static void sendResponseLocation(NewLocation newLocation, int batteryPercentages) {
+    public static void sendResponseLocation(NewLocation newLocation, int batteryPercentages, int batteryPlugged) {
         ResponseToFcmDataLocation responseDataLocation = new ResponseToFcmDataLocation(
                 FCM_RESPONSE_TYPE_LOCATION,
                 "",
                 "" + batteryPercentages,
+                batteryPlugged,
                 "" + newLocation.getLatitude(),
                 "" + newLocation.getLongitude(),
                 "" + (newLocation.getSpeed() * 3.6),

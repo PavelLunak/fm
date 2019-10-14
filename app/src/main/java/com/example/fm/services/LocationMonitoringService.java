@@ -19,6 +19,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.example.fm.MainActivity;
+import com.example.fm.firebase.MyFirebaseMessagingService;
 import com.example.fm.listeners.OnOuterDatabaseChangedListener;
 import com.example.fm.objects.NewLocation;
 import com.example.fm.objects.PositionChecked;
@@ -64,11 +65,9 @@ public class LocationMonitoringService extends Service implements
     boolean isStopRequestFromUI = false;
     NewLocation newLocation;
 
-    //Nastaví se na TRUE, pokud přijde požadavek na zobrazení aktuální polohy za běhu sledování polohy,
-    //aby po získání aktuální polohy nedošlo k zastavení sledování
-    //boolean gpsIsRunningBeforeMapRequest = false;
-
     int batteryPercentages;
+    int batteryPlugged;
+
     ArrayList<PositionChecked> autoSaveBuffer;
     ArrayList<PositionChecked> autoCheckedPositions;
 
@@ -185,22 +184,25 @@ public class LocationMonitoringService extends Service implements
             return;
         }
 
+        updateBatteryStatus();
+
         this.newLocation = new NewLocation(
                 location.getTime(),
                 location.getLatitude(),
                 location.getLongitude(),
                 location.hasSpeed() ? (location.getSpeed() * 3.6f) : 0,
                 location.getAccuracy(),
-                batteryPercentages);
+                batteryPercentages,
+                batteryPlugged);
 
-        //this.resultForRequestActualLocation = new ResultForRequestActualLocation(newLocation, null);
         this.lastCheckedPositionTime = new Date().getTime();
 
         Log.i(TAG, "LocationMonitoringService - onLocationChanged() - accuracy: " + this.newLocation.getAccuracy());
         Log.i(TAG, "LocationMonitoringService - onLocationChanged() - latitude: " + this.newLocation.getLatitude());
         Log.i(TAG, "LocationMonitoringService - onLocationChanged() - longitude: " + this.newLocation.getLongitude());
         Log.i(TAG, "LocationMonitoringService - onLocationChanged() - lastUpdate: " + this.newLocation.getDate());
-        Log.i(TAG, "LocationMonitoringService - onLocationChanged() - battery: " + this.newLocation.getBatteryStatus());
+        Log.i(TAG, "LocationMonitoringService - onLocationChanged() - battery percentages: " + this.newLocation.getBatteryPercentages());
+        Log.i(TAG, "LocationMonitoringService - onLocationChanged() - battery plugged: " + (this.newLocation.getBatterStatus() == 0 ? "Nenabíjí se" : "Nabíjí se") + " ("+ this.newLocation.getBatterStatus() + ")");
 
         if (onlyGivenNumberOfPositions) {
             Log.i(TAG, "POUZE UČENÝ POČET POLOH == TRUE");
@@ -235,13 +237,14 @@ public class LocationMonitoringService extends Service implements
         }
     }
 
-    public NewLocation getLastLocation() {
-        return newLocation;
-    }
-
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
         Toast.makeText(this, "Service  - onConnectionFailed", Toast.LENGTH_SHORT);
+    }
+
+    private void updateBatteryStatus() {
+        batteryPercentages = AppUtils.getBatteryPercentage(LocationMonitoringService.this);
+        batteryPlugged = AppUtils.getBatteryIsPlugged(LocationMonitoringService.this);
     }
 
     public void startGps() {
@@ -605,8 +608,8 @@ public class LocationMonitoringService extends Service implements
                 onlyGivenNumberOfPositions = false;
                 NewLocation loc = getBestAccuracyLocation(LocationMonitoringService.this.tempLocations) ;
 
-                if (loc != null) FcmManager.sendResponseLocation(loc, batteryPercentages);
-                else FcmManager.sendMessage("Získaná poloha == NULL", batteryPercentages, MainActivity.tokenTest);
+                if (loc != null) FcmManager.sendResponseLocation(loc, batteryPercentages, batteryPlugged);
+                else FcmManager.sendMessage("Získaná poloha == NULL", batteryPercentages, batteryPlugged, MainActivity.tokenTest);
 
                 stopGps();
                 positionInterval = PrefsUtils.getPrefsLocationInterval(LocationMonitoringService.this);

@@ -10,18 +10,28 @@ public class NewLocation implements Parcelable {
     double longitude;
     float speed;
     float accuracy;
-    float batteryStatus;
+    float batteryPercentages;
+    int batterStatus;
 
 
     public NewLocation() {}
 
-    public NewLocation(long date, double latitude, double longitude, float speed, float accuracy, float batteryStatus) {
+    public NewLocation(
+            long date,
+            double latitude,
+            double longitude,
+            float speed,
+            float accuracy,
+            float batteryPercentages,
+            int batteryStatus) {
+
         this.date = date;
         this.latitude = latitude;
         this.longitude = longitude;
         this.speed = speed;
         this.accuracy = accuracy;
-        this.batteryStatus = batteryStatus;
+        this.batteryPercentages = batteryPercentages;
+        this.batterStatus = batteryStatus;
     }
 
 
@@ -65,12 +75,20 @@ public class NewLocation implements Parcelable {
         this.accuracy = accuracy;
     }
 
-    public float getBatteryStatus() {
-        return batteryStatus;
+    public float getBatteryPercentages() {
+        return batteryPercentages;
     }
 
-    public void setBatteryStatus(float batteryStatus) {
-        this.batteryStatus = batteryStatus;
+    public void setBatteryPercentages(float batteryPercentages) {
+        this.batteryPercentages = batteryPercentages;
+    }
+
+    public int getBatterStatus() {
+        return batterStatus;
+    }
+
+    public void setBatterStatus(int batterStatus) {
+        this.batterStatus = batterStatus;
     }
 
     @Override
@@ -85,7 +103,8 @@ public class NewLocation implements Parcelable {
         dest.writeDouble(this.longitude);
         dest.writeFloat(this.speed);
         dest.writeFloat(this.accuracy);
-        dest.writeFloat(this.batteryStatus);
+        dest.writeFloat(this.batteryPercentages);
+        dest.writeInt(this.batterStatus);
     }
 
     protected NewLocation(Parcel in) {
@@ -94,7 +113,8 @@ public class NewLocation implements Parcelable {
         this.longitude = in.readDouble();
         this.speed = in.readFloat();
         this.accuracy = in.readFloat();
-        this.batteryStatus = in.readFloat();
+        this.batteryPercentages = in.readFloat();
+        this.batterStatus = in.readInt();
     }
 
     public static final Parcelable.Creator<NewLocation> CREATOR = new Parcelable.Creator<NewLocation>() {

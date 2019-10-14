@@ -6,15 +6,17 @@ public class ResponseToFcmData {
 
     private int responseType;
     private String message;
-    private String battery;
+    private String batteryPercentages;
+    private int batteryPlugged;
 
 
     public ResponseToFcmData() {}
 
-    public ResponseToFcmData(int responseType, String message, String battery) {
+    public ResponseToFcmData(int responseType, String message, String batteryPercentages, int batteryPlugged) {
         this.responseType = responseType;
         this.message = message;
-        this.battery = battery;
+        this.batteryPercentages = batteryPercentages;
+        this.batteryPlugged = batteryPlugged;
     }
 
 
@@ -25,8 +27,10 @@ public class ResponseToFcmData {
                 .append(AppUtils.responseTypeToString(responseType))
                 .append("\nmessage: ")
                 .append(message == null ? "null" : message)
-                .append("\nbattery: ")
-                .append(battery)
+                .append("\nbattery %: ")
+                .append(batteryPercentages).append("%")
+                .append("\nbattery status: ")
+                .append(batteryPlugged == 0 ? "NENABÍJÍ SE" : "NANABÍJÍ SE")
                 .toString();
     }
 }

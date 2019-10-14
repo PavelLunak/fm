@@ -256,10 +256,20 @@ public class AppUtils implements AppConstants {
 
         int level = batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) : -1;
         int scale = batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1) : -1;
+        int plugged = batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) : 0;
 
         float batteryPct = level / (float) scale;
 
         Log.i(TAG, "battery2: " + ((int) (batteryPct * 100)));
         return (int) (batteryPct * 100);
+    }
+
+    public static int getBatteryIsPlugged(Context context) {
+        IntentFilter iFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        Intent batteryStatus = context.registerReceiver(null, iFilter);
+
+        //0 = nedobíjí se
+        //pokud je cokoliv jiného než 0, dobíjí se
+        return batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) : 0;
     }
 }

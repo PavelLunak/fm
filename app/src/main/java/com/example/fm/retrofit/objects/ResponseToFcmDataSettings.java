@@ -13,7 +13,8 @@ public class ResponseToFcmDataSettings extends ResponseToFcmData {
     public ResponseToFcmDataSettings(
             int responseType,
             String message,
-            String battery,
+            String batteryPercentages,
+            int batteryPlugged,
             int savingToDatabaseEnabled,
             long autoCheckedPositionSavingInterval,
             int maxCountOfLocationChecked,
@@ -21,7 +22,7 @@ public class ResponseToFcmDataSettings extends ResponseToFcmData {
             long locationsInterval,
             int locationsIntervalTimeUnit) {
 
-        super(responseType, message, battery);
+        super(responseType, message, batteryPercentages, batteryPlugged);
         this.savingToDatabaseEnabled = savingToDatabaseEnabled;
         this.autoCheckedPositionSavingInterval = autoCheckedPositionSavingInterval;
         this.maxCountOfLocationChecked = maxCountOfLocationChecked;

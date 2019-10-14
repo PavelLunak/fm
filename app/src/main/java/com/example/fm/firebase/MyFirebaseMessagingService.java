@@ -60,6 +60,7 @@ import retrofit2.Response;
 public class MyFirebaseMessagingService extends FirebaseMessagingService implements AppConstants {
 
     private int batteryPercentages;
+    private int batteryPlugged;
 
     private boolean mBounded;
     private OnServiceBoundedListener onServiceBoundedListener;
@@ -100,7 +101,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
         public void onServiceConnected(ComponentName name, IBinder service) {
             AppUtils.appendLog("MyFirebaseMessagingService - ServiceConnection - onServiceConnected()");
 
-            updateBatteryPercentages();
+            updateBatteryStatus();
 
             LocationMonitoringService.LocalBinderNewVersion mLocalBinder = (LocationMonitoringService.LocalBinderNewVersion) service;
             mServiceNew = mLocalBinder.getService();
@@ -127,52 +128,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                 if (mServiceNew != null) mServiceNew.getActualLocation(REQUIRED_NUMBER_OF_LOCATIONS);
                 else Log.i(TAG, "mServiceNew == null");
                 isRequestLocation = false;
-            } else if (isRequestLocationResult) {
-                /*
-                AppUtils.appendLog("MyFirebaseMessagingService - onServiceConnected() : isRequestLocationResult");
-
-                if (mServiceNew != null) {
-                    Log.i(TAG, mServiceNew.getActualLocationResult().getActualLocation().toString());
-                    ResultForRequestActualLocation result = mServiceNew.getActualLocationResult();
-
-                    if (result == null) {
-                        sendMessage("ResultForRequestActualLocation == NULL");
-                        return;
-                    }
-
-                    if (result.getMessage() != null) {
-                        sendMessage(result.getMessage());
-                    } else {
-                        if (result.getMessage() == null) {
-                            ResponseToFcmDataLocation responseDataLocation = new ResponseToFcmDataLocation(
-                                    FCM_RESPONSE_TYPE_LOCATION,
-                                    "",
-                                    "" + batteryPercentages,
-                                    "" + result.getActualLocation().getLatitude(),
-                                    "" + result.getActualLocation().getLongitude(),
-                                    "" + (result.getActualLocation().getSpeed() * 3.6),
-                                    "" + result.getActualLocation().getAccuracy(),
-                                    "" + result.getActualLocation().getDate());
-
-                            ResponseToFcm responseToFcm = new ResponseToFcm(tokenForResponse, responseDataLocation);
-                            sendResponse(responseToFcm);
-                        } else {
-                            sendMessage("Získaná poloha == NULL");
-                        }
-                    }
-                } else {
-                    Log.i(TAG, "mServiceNew == null");
-                }
-
-                isRequestLocationResult = false;
-                */
             } else if (isRequestKillService) {
                 AppUtils.appendLog("MyFirebaseMessagingService - onServiceConnected() : isRequestKillService");
                 mServiceNew.setRequestStopService();
                 killService();
                 isRequestKillService = false;
             } else {
-                //startLocationWatcher();
                 sendServiceStatus();
             }
         }
@@ -251,7 +212,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
 
         Log.i(TAG, "MyFirebaseMessagingService - onMessageReceived");
 
-        updateBatteryPercentages();
+        updateBatteryStatus();
 
         if (remoteMessage != null) {
             Map<String, String> data = remoteMessage.getData();
@@ -287,11 +248,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                             break;
                         case FCM_REQUEST_TYPE_SERVICE_START:
                             startService();
-                            //startLocationWatcher();
                             break;
                         case FCM_REQUEST_TYPE_SERVICE_STOP:
                             stopService();
-                            //stopLocationWatcher();
                             break;
                         case FCM_REQUEST_TYPE_GPS_START:
                             if (!AppUtils.isLocationEnabled(this)) {
@@ -391,15 +350,15 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                                     editor.putInt("locationsIntervalTimeUnit", Integer.parseInt(data.get("locationsIntervalTimeUnit")));
                                 editor.commit();
 
-                                responseData = new ResponseToFcmData(FCM_RESPONSE_TYPE_SETTINGS_DATABASE_SAVED, "Nové nastavení uloženo.", "" + batteryPercentages);
+                                responseData = new ResponseToFcmData(FCM_RESPONSE_TYPE_SETTINGS_DATABASE_SAVED, "Nové nastavení uloženo.", "" + batteryPercentages, batteryPlugged);
                                 responseToFcm = new ResponseToFcm(tokenForResponse, responseData);
                             } catch (NumberFormatException e) {
                                 e.printStackTrace();
-                                responseData = new ResponseToFcmData(FCM_RESPONSE_TYPE_SETTINGS_DATABASE_SAVE_ERROR, "Chyba při ukládání nastavení - NumberFormatException", "" + batteryPercentages);
+                                responseData = new ResponseToFcmData(FCM_RESPONSE_TYPE_SETTINGS_DATABASE_SAVE_ERROR, "Chyba při ukládání nastavení - NumberFormatException", "" + batteryPercentages, batteryPlugged);
                                 responseToFcm = new ResponseToFcm(tokenForResponse, responseData);
                             } catch (NullPointerException e) {
                                 e.printStackTrace();
-                                responseData = new ResponseToFcmData(FCM_RESPONSE_TYPE_SETTINGS_DATABASE_SAVE_ERROR, "Chyba při ukládání nastavení - NullPointerException", "" + batteryPercentages);
+                                responseData = new ResponseToFcmData(FCM_RESPONSE_TYPE_SETTINGS_DATABASE_SAVE_ERROR, "Chyba při ukládání nastavení - NullPointerException", "" + batteryPercentages, batteryPlugged);
                                 responseToFcm = new ResponseToFcm(tokenForResponse, responseData);
                             }
 
@@ -412,6 +371,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                                     FCM_RESPONSE_TYPE_SETTINGS_LOADED,
                                     "Nastavení načteno.",
                                     "" + batteryPercentages,
+                                    batteryPlugged,
                                     sp.getBoolean(KEY_DB_ENABLED, false) ? 1 : 0,
                                     sp.getLong(KEY_SAVE_INTERVAL, -1),
                                     sp.getInt(KEY_MAX_COUNT_LOC_SAVE, -1),
@@ -654,7 +614,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                             FCM_RESPONSE_TYPE_LOCATION,
                             "",
                             "" + batteryPercentages,
-                            "" + location.getLatitude(),
+                            batteryPlugged,
+                            "" + location.getLongitude(),
                             "" + location.getLongitude(),
                             "" + location.getAccuracy(),
                             "" + (location.getSpeed() * 3.6),
@@ -929,14 +890,16 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
         ResponseToFcmData responseToFcmData = new ResponseToFcmData(
                 FCM_RESPONSE_TYPE_MESSAGE,
                 message,
-                "" + batteryPercentages);
+                "" + batteryPercentages,
+                batteryPlugged);
 
         ResponseToFcm response = new ResponseToFcm(tokenForResponse, responseToFcmData);
         sendResponse(response);
     }
 
-    private void updateBatteryPercentages() {
+    private void updateBatteryStatus() {
         batteryPercentages = AppUtils.getBatteryPercentage(MyFirebaseMessagingService.this);
+        batteryPlugged = AppUtils.getBatteryIsPlugged(MyFirebaseMessagingService.this);
     }
 
     private void sendServiceStatus() {
@@ -949,6 +912,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                 FCM_RESPONSE_SERVICE_STATUS,
                 prepareResponseMessage(),
                 "" + batteryPercentages,
+                batteryPlugged,
                 serviceStartet ? STARTED : STOPED,
                 gpsStarted ? STARTED : STOPED);
 

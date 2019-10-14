@@ -9,11 +9,12 @@ public class ResponseToFcmDataServiceStatus extends ResponseToFcmData {
     public ResponseToFcmDataServiceStatus(
             int responseType,
             String message,
-            String battery,
+            String batteryPercentages,
+            int batteryPlugged,
             int serviceStatus,
             int gpsStatus) {
 
-        super(responseType, message, battery);
+        super(responseType, message, batteryPercentages,batteryPlugged);
         this.serviceStatus = serviceStatus;
         this.gpsStatus = gpsStatus;
     }
