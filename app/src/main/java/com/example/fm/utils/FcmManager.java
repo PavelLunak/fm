@@ -1,14 +1,21 @@
 package com.example.fm.utils;
 
+import android.content.Context;
+import android.content.Intent;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.example.fm.MainActivity;
+import com.example.fm.objects.Device;
 import com.example.fm.objects.NewLocation;
+import com.example.fm.retrofit.ApiDatabase;
 import com.example.fm.retrofit.ApiFcm;
+import com.example.fm.retrofit.ControllerDatabase;
 import com.example.fm.retrofit.ControllerFcm;
 import com.example.fm.retrofit.objects.ResponseToFcmData;
 import com.example.fm.retrofit.objects.ResponseToFcmDataLocation;
 import com.example.fm.retrofit.requests.ResponseToFcm;
+import com.example.fm.retrofit.responses.ResponseNewDevice;
 
 import java.io.IOException;
 
@@ -64,12 +71,19 @@ public class FcmManager implements AppConstants {
         });
     }
 
-    public static void sendMessage(String message, int batteryPercentages, int batteryPlugged, String tokenForResponse) {
+    public static void sendMessage(
+            String message,
+            int batteryPercentages,
+            int batteryPlugged,
+            String tokenForResponse,
+            int actionCode) {
+
         ResponseToFcmData responseToFcmData = new ResponseToFcmData(
                 FCM_RESPONSE_TYPE_MESSAGE,
                 message,
                 "" + batteryPercentages,
-                batteryPlugged);
+                batteryPlugged,
+                actionCode);
 
         ResponseToFcm response = new ResponseToFcm(tokenForResponse, responseToFcmData);
         sendResponse(response);
@@ -81,6 +95,7 @@ public class FcmManager implements AppConstants {
                 "",
                 "" + batteryPercentages,
                 batteryPlugged,
+                ACTION_MESSAGE_CODE_NONE,
                 "" + newLocation.getLatitude(),
                 "" + newLocation.getLongitude(),
                 "" + (newLocation.getSpeed() * 3.6),
@@ -89,5 +104,74 @@ public class FcmManager implements AppConstants {
 
         ResponseToFcm responseToFcm = new ResponseToFcm(MainActivity.tokenTest, responseDataLocation);
         FcmManager.sendResponse(responseToFcm);
+    }
+
+    public static void registerDevice(final Context context, Device device, String newToken) {
+        ApiDatabase api = ControllerDatabase.getRetrofitInstance().create(ApiDatabase.class);
+        final Call<ResponseNewDevice> call = api.addDevice(device);
+
+        call.enqueue(new Callback<ResponseNewDevice>() {
+            @Override
+            public void onResponse(Call<ResponseNewDevice> call, Response<ResponseNewDevice> response) {
+
+                boolean isRegistered = false;
+
+                if (response.isSuccessful()) {
+                    Log.i(TAG_DB, "isSuccessful == TRUE");
+                    Log.i(TAG_DB, "CODE: " + response.code());
+
+                    /*
+                    try {
+                        Log.i(TAG_DB, response.body().string());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    */
+
+                    if (response.body() != null) {
+                        ResponseNewDevice responseNewDevice = response.body();
+                        String message = null;
+
+                        if (responseNewDevice.getMessage() != null) {
+                            message = responseNewDevice.getMessage();
+                        } else {
+                            isRegistered = true;
+                        }
+
+                        Intent intent = new Intent(ACTION_REGISTRATION);
+                        intent.putExtra(EXTRA_REGISTRATION, isRegistered);
+                        intent.putExtra(EXTRA_MESSAGE, message);
+                        intent.putExtra(EXTRA_DB_DEVICE_ID, responseNewDevice.getNew_position_id());
+                        LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
+
+                    } else {
+                        Intent intent = new Intent(ACTION_REGISTRATION);
+                        intent.putExtra(EXTRA_REGISTRATION, false);
+                        LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
+                    }
+                } else {
+                    Log.i(TAG_DB, "isSuccessful == FALSE");
+
+                    try {
+                        Log.i(TAG_DB, response.errorBody().string());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    Intent intent = new Intent(ACTION_REGISTRATION);
+                    intent.putExtra(EXTRA_REGISTRATION, false);
+                    LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ResponseNewDevice> call, Throwable t) {
+                Log.i(TAG_DB, "onFailure()");
+                Log.i(TAG_DB, t.getMessage());
+                Intent intent = new Intent(ACTION_REGISTRATION);
+                intent.putExtra(EXTRA_REGISTRATION, false);
+                LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
+            }
+        });
     }
 }

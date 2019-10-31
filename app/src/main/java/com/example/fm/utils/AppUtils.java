@@ -1,9 +1,11 @@
 package com.example.fm.utils;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.LocationManager;
@@ -13,10 +15,13 @@ import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Environment;
 import android.provider.Settings;
+import android.support.v4.app.ActivityCompat;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.widget.Toast;
 
 import com.example.fm.MainActivity;
+import com.example.fm.objects.DeviceIdentification;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -84,13 +89,12 @@ public class AppUtils implements AppConstants {
                         DateTimeUtils.getDateTimeForLog(new Date().getTime()) +
                         "_log.txt");
 
-        if(!directory.exists()) directory.mkdir();
+        if (!directory.exists()) directory.mkdir();
 
         if (!file.exists()) {
             try {
                 file.createNewFile();
-            }
-            catch (IOException e) {
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }
@@ -102,8 +106,7 @@ public class AppUtils implements AppConstants {
             buf.append(textWithDate);
             buf.newLine();
             buf.close();
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -119,7 +122,7 @@ public class AppUtils implements AppConstants {
         if (file.isDirectory()) {
             File[] files = file.listFiles();
 
-            for (int i = 0, count = files.length; i < count; i ++) {
+            for (int i = 0, count = files.length; i < count; i++) {
                 files[i].delete();
             }
         }
@@ -159,7 +162,8 @@ public class AppUtils implements AppConstants {
                 return "FCM_RESPONSE_TYPE_MESSAGE";
             case FCM_RESPONSE_SERVICE_STATUS:
                 return "FCM_RESPONSE_SERVICE_STATUS";
-            default: return "unknown";
+            default:
+                return "unknown";
         }
     }
 
@@ -185,7 +189,8 @@ public class AppUtils implements AppConstants {
                 return "FCM_REQUEST_TYPE_ALARM";
             case FCM_REQUEST_TYPE_CALL:
                 return "FCM_REQUEST_TYPE_CALL";
-            default: return "unknown";
+            default:
+                return "unknown";
         }
     }
 
@@ -194,7 +199,7 @@ public class AppUtils implements AppConstants {
             case SIM_STATE_UNKNOWN:
                 return "SIM_STATE_UNKNOWN (" + SIM_STATE_UNKNOWN + ")";
             case SIM_STATE_ABSENT:
-                return "SIM_STATE_ABSENT (" + SIM_STATE_ABSENT + ")";
+                return "Ve vzdáleném zařízení není vložena SIM karta";
             case SIM_STATE_PIN_REQUIRED:
                 return "SIM_STATE_PIN_REQUIRED (" + SIM_STATE_PIN_REQUIRED + ")";
             case SIM_STATE_PUK_REQUIRED:
@@ -211,14 +216,15 @@ public class AppUtils implements AppConstants {
                 return "SIM_STATE_CARD_IO_ERROR (" + SIM_STATE_CARD_IO_ERROR + ")";
             case SIM_STATE_CARD_RESTRICTED:
                 return "SIM_STATE_CARD_RESTRICTED (" + SIM_STATE_CARD_RESTRICTED + ")";
-            default: return "unknown";
+            default:
+                return "unknown";
         }
     }
 
     public static Boolean isLocationEnabled(Context context) {
         int mode = Settings.Secure.getInt(context.getContentResolver(), Settings.Secure.LOCATION_MODE,
                 Settings.Secure.LOCATION_MODE_OFF);
-        return  (mode != Settings.Secure.LOCATION_MODE_OFF);
+        return (mode != Settings.Secure.LOCATION_MODE_OFF);
     }
 
     public static Address getAddressForLocation(Context context, double la, double lo) {
@@ -271,5 +277,51 @@ public class AppUtils implements AppConstants {
         //0 = nedobíjí se
         //pokud je cokoliv jiného než 0, dobíjí se
         return batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) : 0;
+    }
+
+    public static String getDeviceName() {
+        String manufacturer = Build.MANUFACTURER;
+        String model = Build.MODEL;
+        if (model.startsWith(manufacturer)) {
+            return capitalize(model);
+        } else {
+            return capitalize(manufacturer) + " " + model;
+        }
+    }
+
+    public static String capitalize(String s) {
+        if (s == null || s.length() == 0) {
+            return "";
+        }
+        char first = s.charAt(0);
+        if (Character.isUpperCase(first)) {
+            return s;
+        } else {
+            return Character.toUpperCase(first) + s.substring(1);
+        }
+    }
+
+    public static DeviceIdentification getDeviceIdentification(Context context) {
+        String androidId = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
+        String deviceId = "";
+
+        TelephonyManager telephonyManager;
+        telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+            /*
+             * getDeviceId() returns the unique device ID.
+             * For example,the IMEI for GSM and the MEID or ESN for CDMA phones.
+             */
+            deviceId = telephonyManager.getDeviceId();
+
+            /*
+             * getSubscriberId() returns the unique subscriber ID,
+             * For example, the IMSI for a GSM phone.
+             */
+            String subscriberId = telephonyManager.getSubscriberId();
+        }
+
+        return new DeviceIdentification(androidId, deviceId);
     }
 }

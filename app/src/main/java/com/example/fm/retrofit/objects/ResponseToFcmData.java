@@ -8,15 +8,17 @@ public class ResponseToFcmData {
     private String message;
     private String batteryPercentages;
     private int batteryPlugged;
+    private int actionCode;
 
 
     public ResponseToFcmData() {}
 
-    public ResponseToFcmData(int responseType, String message, String batteryPercentages, int batteryPlugged) {
+    public ResponseToFcmData(int responseType, String message, String batteryPercentages, int batteryPlugged, int actionCode) {
         this.responseType = responseType;
         this.message = message;
         this.batteryPercentages = batteryPercentages;
         this.batteryPlugged = batteryPlugged;
+        this.actionCode = actionCode;
     }
 
 

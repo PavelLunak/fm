@@ -5,6 +5,21 @@ import android.content.SharedPreferences;
 
 public class PrefsUtils implements AppConstants {
 
+    //STAV REGISTRACE TOKENU
+    // -------------------------------------------------
+    public static void updatePrefsTokenRegistrationStatus(Context context, boolean registered) {
+        SharedPreferences sharedpreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedpreferences.edit();
+        editor.putBoolean("registered", registered);
+        editor.commit();
+    }
+
+    public static boolean getPrefsTokenRegistrationStatus(Context context) {
+        SharedPreferences sharedpreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return sharedpreferences.getBoolean("registered", false);
+    }
+    // -------------------------------------------------
+
     //TOKEN
     // -------------------------------------------------
     public static void updatePrefsToken(Context context, String token) {
@@ -20,6 +35,52 @@ public class PrefsUtils implements AppConstants {
     }
     // -------------------------------------------------
 
+    //ID PŘIDĚLENÉ ZAŘÍZENÍ DATABÁZÍ
+    // -------------------------------------------------
+    public static void updatePrefsDatabaseId(Context context, int id) {
+        SharedPreferences sharedpreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedpreferences.edit();
+        editor.putInt("databaseId", id);
+        editor.commit();
+    }
+
+    public static int getPrefsDatabaseId(Context context) {
+        SharedPreferences sharedpreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return sharedpreferences.getInt("databaseId", -1);
+    }
+    // -------------------------------------------------
+
+    //ADROID ID
+    // -------------------------------------------------
+    public static void updateAndroidId(Context context, String androidId) {
+        SharedPreferences sharedpreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedpreferences.edit();
+        editor.putString("androidId", androidId);
+        editor.commit();
+    }
+
+    public static String getAndroidId(Context context) {
+        SharedPreferences sharedpreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return sharedpreferences.getString("androidId", "");
+    }
+    // -------------------------------------------------
+
+    //DEVICE ID
+    // -------------------------------------------------
+    public static void updateDeviceId(Context context, String androidId) {
+        SharedPreferences sharedpreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedpreferences.edit();
+        editor.putString("deviceId", androidId);
+        editor.commit();
+    }
+
+    public static String getDeviceId(Context context) {
+        SharedPreferences sharedpreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return sharedpreferences.getString("deviceId", "");
+    }
+    // -------------------------------------------------
+
+    /*
     //GPS STATUS
     // -------------------------------------------------
     public static void updatePrefsGpsStatus(Context context, boolean isRunning) {
@@ -34,6 +95,7 @@ public class PrefsUtils implements AppConstants {
         return sharedpreferences.getBoolean("gpsIsRunning", false);
     }
     // -------------------------------------------------
+    */
 
     //LOCATION INTERVAL
     // -------------------------------------------------

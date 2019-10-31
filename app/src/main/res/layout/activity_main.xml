@@ -5,19 +5,112 @@
     android:layout_height="match_parent"
     android:background="@android:color/black">
 
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/label"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="15dp"
-        android:layout_marginTop="15dp"
-        android:layout_marginEnd="15dp"
-        android:layout_marginBottom="15dp"
-        android:text="TextView"
-        android:textColor="#FFC800"
-        android:textIsSelectable="true"
-        android:textSize="24sp" />
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" >
+
+            <TextView
+                android:id="@+id/labelDeviceName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="15dp"
+                android:layout_marginTop="15dp"
+                android:layout_marginEnd="15dp"
+                android:layout_marginBottom="15dp"
+                android:text="TextView"
+                android:textColor="#FFC800"
+                android:textIsSelectable="true"
+                android:textSize="24sp" />
+
+            <TextView
+                android:id="@+id/labelRegistrationStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/labelDeviceName"
+                android:layout_marginStart="15dp"
+                android:layout_marginTop="15dp"
+                android:layout_marginEnd="15dp"
+                android:layout_marginBottom="15dp"
+                android:text="TextView"
+                android:textColor="#FFC800"
+                android:textIsSelectable="true"
+                android:textSize="24sp" />
+
+            <ProgressBar
+                android:id="@+id/progressRegistration"
+                style="?android:attr/progressBarStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignTop="@id/labelRegistrationStatus"
+                android:layout_alignBottom="@id/labelRegistrationStatus"
+                android:layout_marginStart="10dp"
+                android:layout_marginLeft="10dp"
+                android:layout_toRightOf="@id/labelRegistrationStatus" />
+
+            <TextView
+                android:id="@+id/labelToken"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/labelRegistrationStatus"
+                android:layout_marginStart="15dp"
+                android:layout_marginTop="15dp"
+                android:layout_marginEnd="15dp"
+                android:layout_marginBottom="15dp"
+                android:text="TextView"
+                android:textColor="#FFC800"
+                android:textIsSelectable="true"
+                android:textSize="24sp" />
+
+            <TextView
+                android:id="@+id/labelAndroidId"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/labelToken"
+                android:layout_marginStart="15dp"
+                android:layout_marginTop="15dp"
+                android:layout_marginEnd="15dp"
+                android:layout_marginBottom="15dp"
+                android:text="TextView"
+                android:textColor="#FFC800"
+                android:textIsSelectable="true"
+                android:textSize="24sp" />
+
+            <TextView
+                android:id="@+id/labelDeviceId"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/labelAndroidId"
+                android:layout_marginStart="15dp"
+                android:layout_marginTop="15dp"
+                android:layout_marginEnd="15dp"
+                android:layout_marginBottom="15dp"
+                android:text="TextView"
+                android:textColor="#FFC800"
+                android:textIsSelectable="true"
+                android:textSize="24sp" />
+
+            <TextView
+                android:id="@+id/labelDatabaseId"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/labelDeviceId"
+                android:layout_marginStart="15dp"
+                android:layout_marginTop="15dp"
+                android:layout_marginEnd="15dp"
+                android:layout_marginBottom="15dp"
+                android:text="TextView"
+                android:textColor="#FFC800"
+                android:textIsSelectable="true"
+                android:textSize="24sp" />
+
+        </RelativeLayout>
+
+    </ScrollView>
 
     <FrameLayout
         android:id="@+id/container"

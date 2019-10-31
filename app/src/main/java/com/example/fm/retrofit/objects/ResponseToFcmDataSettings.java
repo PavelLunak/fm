@@ -1,5 +1,8 @@
 package com.example.fm.retrofit.objects;
 
+import com.example.fm.utils.AppConstants;
+
+
 public class ResponseToFcmDataSettings extends ResponseToFcmData {
 
     private int savingToDatabaseEnabled;        //0 = DISABLED, 1 = ENABLED
@@ -22,7 +25,7 @@ public class ResponseToFcmDataSettings extends ResponseToFcmData {
             long locationsInterval,
             int locationsIntervalTimeUnit) {
 
-        super(responseType, message, batteryPercentages, batteryPlugged);
+        super(responseType, message, batteryPercentages, batteryPlugged, AppConstants.ACTION_MESSAGE_CODE_NONE);
         this.savingToDatabaseEnabled = savingToDatabaseEnabled;
         this.autoCheckedPositionSavingInterval = autoCheckedPositionSavingInterval;
         this.maxCountOfLocationChecked = maxCountOfLocationChecked;

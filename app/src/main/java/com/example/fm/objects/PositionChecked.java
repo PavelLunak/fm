@@ -8,6 +8,7 @@ import android.os.Parcelable;
 public class PositionChecked implements Parcelable {
 
     int id;
+    int device_id;
     String name;
     private long date;
     private double latitude;
@@ -37,7 +38,8 @@ public class PositionChecked implements Parcelable {
 
     public PositionChecked() {}
 
-    public PositionChecked(long date, double latitude, double longitude, float speed, double accuracy) {
+    public PositionChecked(int device_id, long date, double latitude, double longitude, float speed, double accuracy) {
+        this.device_id = device_id;
         this.date = date;
         this.latitude = latitude;
         this.longitude = longitude;
@@ -50,6 +52,14 @@ public class PositionChecked implements Parcelable {
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    public int getDevice_id() {
+        return device_id;
+    }
+
+    public void setDevice_id(int device_id) {
+        this.device_id = device_id;
     }
 
     public String getName() {
@@ -236,6 +246,7 @@ public class PositionChecked implements Parcelable {
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeInt(this.id);
+        dest.writeInt(this.device_id);
         dest.writeString(this.name);
         dest.writeLong(this.date);
         dest.writeDouble(this.latitude);
@@ -262,6 +273,7 @@ public class PositionChecked implements Parcelable {
 
     protected PositionChecked(Parcel in) {
         this.id = in.readInt();
+        this.device_id = in.readInt();
         this.name = in.readString();
         this.date = in.readLong();
         this.latitude = in.readDouble();
@@ -286,7 +298,7 @@ public class PositionChecked implements Parcelable {
         this.status = in.readInt();
     }
 
-    public static final Creator<PositionChecked> CREATOR = new Creator<PositionChecked>() {
+    public static final Parcelable.Creator<PositionChecked> CREATOR = new Parcelable.Creator<PositionChecked>() {
         @Override
         public PositionChecked createFromParcel(Parcel source) {
             return new PositionChecked(source);

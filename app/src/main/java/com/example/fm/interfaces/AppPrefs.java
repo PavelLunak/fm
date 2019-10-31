@@ -7,6 +7,7 @@ import org.androidannotations.annotations.sharedpreferences.SharedPref;
 @SharedPref
 public interface AppPrefs {
     String fcmToken();
+    int databaseId();
     long locationInterval();
     int locationIntervalTimeUnit();
     boolean savingToDatabaseEnabled();
@@ -14,5 +15,7 @@ public interface AppPrefs {
     int maxCountOfLocationChecked();
     int timeUnit();
     boolean requestLocation();
-    boolean gpsIsRunning();
+    boolean registered(); //Token úspěšně odeslán do databáze
+    String androidId();
+    String deviceId();
 }

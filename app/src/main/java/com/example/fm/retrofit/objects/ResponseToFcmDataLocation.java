@@ -14,13 +14,14 @@ public class ResponseToFcmDataLocation extends ResponseToFcmData {
             String message,
             String batteryPercentages,
             int batteryPlugged,
+            int actionCode,
             String latitude,
             String longitude,
             String speed,
             String accuracy,
             String date) {
 
-        super(responseType, message, batteryPercentages, batteryPlugged);
+        super(responseType, message, batteryPercentages, batteryPlugged, actionCode);
 
         this.latitude = latitude;
         this.longitude = longitude;

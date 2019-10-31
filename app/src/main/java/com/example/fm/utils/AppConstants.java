@@ -9,12 +9,17 @@ public interface AppConstants {
     String PREFS_NAME = "MainActivity__AppPrefs";
 
     String TAG = "log_tag";
+    String TAG_DB = "log_tag_db";
+
     long LOCATION_DEFAULT_INTERVAL = 1000;
     long FASTEST_DEFAULT_LOCATION_INTERVAL = 1000;
     long MAX_AGE_OF_LOCATION = 60000;
 
     String EXTRA_LOCATION = "extra_location";
     String EXTRA_MESSAGE = "extra_message";
+    String EXTRA_REGISTRATION = "extra_registration";
+    String EXTRA_TOKEN = "extra_token";
+    String EXTRA_DB_DEVICE_ID = "extra_db_device_id";
 
     String ACTION_LOCATION_BROADCAST = LocationMonitoringService.class.getName() + "LocationBroadcast";
     String ACTION_RESTART_SERVICE_BROADCAST = LocationMonitoringService.class.getName() + "RestartService";
@@ -22,6 +27,8 @@ public interface AppConstants {
     String ACTION_START_SERVICE = "start_service";
     String ACTION_ON_UNBIND_SERVICE = "on_unbind_service";
     String ACTION_MESSAGE = "action_message";
+    String ACTION_REGISTRATION = "action_registration";
+    String ACTION_NEW_TOKEN = "action_new_token";
 
     int FCM_REQUEST_TYPE_SERVICE_STATUS = 1;
     int FCM_REQUEST_TYPE_SERVICE_START = 2;
@@ -62,6 +69,12 @@ public interface AppConstants {
     String KEY_MAX_COUNT_LOC_SAVE = "maxCountOfLocationChecked";
     String KEY_SERVICE_STATUS = "service_status";
     String KEY_GPS_STATUS = "gps_status";
+
+    int ACTION_MESSAGE_CODE_NONE = 1000;
+    int ACTION_MESSAGE_CODE_ALARM_START = 1001;
+    int ACTION_MESSAGE_CODE_ALARM_STOP = 1002;
+    int ACTION_MESSAGE_CODE_CALL_REQUEST = 1003;
+    int ACTION_MESSAGE_CODE_CALL_ERROR = 1004;
 
     int TIME_UNIT_SECONDS = 1;
     int TIME_UNIT_MINUTES = 2;

@@ -19,7 +19,6 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.example.fm.MainActivity;
-import com.example.fm.firebase.MyFirebaseMessagingService;
 import com.example.fm.listeners.OnOuterDatabaseChangedListener;
 import com.example.fm.objects.NewLocation;
 import com.example.fm.objects.PositionChecked;
@@ -62,7 +61,7 @@ public class LocationMonitoringService extends Service implements
     LocationRequest mLocationRequest = new LocationRequest();
     LocationCallback mLocationCallback;
 
-    boolean isStopRequestFromUI = false;
+    boolean isStopRequest = false;
     NewLocation newLocation;
 
     int batteryPercentages;
@@ -86,6 +85,8 @@ public class LocationMonitoringService extends Service implements
     //Příznak, že probíhá ukládání poloh do databáze na serveru.
     //Pokud je TRUE, bude pokus o odeslání dat odložen na příště
     boolean isSavingDataToExternalDatabase;
+
+    boolean isGpsRunning = false;
 
     long lastAutoSaveToDb;
     long lastCheckedPositionTime;
@@ -121,7 +122,7 @@ public class LocationMonitoringService extends Service implements
         AppUtils.appendLog("*** LocationMonitoringService - onStartCommand() ***");
         LocalBroadcastManager.getInstance(this).sendBroadcast(new Intent(ACTION_START_SERVICE));
 
-        Log.i(TAG, "LocationMonitoringService - onStartCommand() : gpsIsRunning == " + PrefsUtils.getPrefsGpsStatus(this));
+        //Log.i(TAG, "LocationMonitoringService - onStartCommand() : gpsIsRunning == " + PrefsUtils.getPrefsGpsStatus(this));
 
         //Make it stick to the notification panel so it is less prone to get cancelled by the Operating System.
         return START_STICKY;
@@ -132,7 +133,7 @@ public class LocationMonitoringService extends Service implements
     public IBinder onBind(Intent intent) {
         AppUtils.appendLog("*** LocationMonitoringService - onBind() ***");
 
-        Log.i(TAG, "LocationMonitoringService - onBind() : gpsIsRunning == " + PrefsUtils.getPrefsGpsStatus(this));
+        //Log.i(TAG, "LocationMonitoringService - onBind() : gpsIsRunning == " + PrefsUtils.getPrefsGpsStatus(this));
 
         return mBinder;
     }
@@ -148,7 +149,7 @@ public class LocationMonitoringService extends Service implements
         super.onDestroy();
         AppUtils.appendLog("*** LocationMonitoringService - ondestroy() ***");
 
-        if (!isStopRequestFromUI) {
+        if (!isStopRequest) {
             LocalBroadcastManager.getInstance(this).sendBroadcast(new Intent(ACTION_RESTART_SERVICE_BROADCAST));
         } else {
             LocalBroadcastManager.getInstance(this).sendBroadcast(new Intent(ACTION_DESTROY_SERVICE));
@@ -205,7 +206,7 @@ public class LocationMonitoringService extends Service implements
         Log.i(TAG, "LocationMonitoringService - onLocationChanged() - battery plugged: " + (this.newLocation.getBatterStatus() == 0 ? "Nenabíjí se" : "Nabíjí se") + " ("+ this.newLocation.getBatterStatus() + ")");
 
         if (onlyGivenNumberOfPositions) {
-            Log.i(TAG, "POUZE UČENÝ POČET POLOH == TRUE");
+            Log.i(TAG, "POUZE URČENÝ POČET POLOH == TRUE");
             if (tempLocations == null) tempLocations = new ArrayList<>();
             tempLocations.add(newLocation);
 
@@ -261,7 +262,8 @@ public class LocationMonitoringService extends Service implements
             }
         }
 
-        PrefsUtils.updatePrefsGpsStatus(this,true);
+        //PrefsUtils.updatePrefsGpsStatus(this,true);
+        isGpsRunning = true;
 
         mLocationRequest.setInterval(positionInterval);
         mLocationRequest.setFastestInterval(positionInterval);
@@ -284,7 +286,8 @@ public class LocationMonitoringService extends Service implements
 
     public void stopGps() {
         AppUtils.appendLog("*** LocationMonitoringService - stopGps() ***");
-        PrefsUtils.updatePrefsGpsStatus(this, false);
+        //PrefsUtils.updatePrefsGpsStatus(this, false);
+        isGpsRunning = false;
 
         if (fusedLocationClient != null) {
             fusedLocationClient.removeLocationUpdates(mLocationCallback);
@@ -293,9 +296,13 @@ public class LocationMonitoringService extends Service implements
         }
     }
 
+    public boolean getGpsStatus() {
+        return isGpsRunning;
+    }
+
     public void setRequestStopService() {
         Log.i(TAG, "LocationMonitoringService - setRequestStopService()");
-        isStopRequestFromUI = true;
+        isStopRequest = true;
         stopGps();
     }
 
@@ -536,6 +543,7 @@ public class LocationMonitoringService extends Service implements
         PositionChecked newCheckedPosition = new PositionChecked();
 
         newCheckedPosition.setId(-1);
+        newCheckedPosition.setDevice_id(PrefsUtils.getPrefsDatabaseId(LocationMonitoringService.this));
         newCheckedPosition.setDate(this.newLocation.getDate());
         newCheckedPosition.setLatitude(this.newLocation.getLatitude());
         newCheckedPosition.setLongitude(this.newLocation.getLongitude());
@@ -609,26 +617,10 @@ public class LocationMonitoringService extends Service implements
                 NewLocation loc = getBestAccuracyLocation(LocationMonitoringService.this.tempLocations) ;
 
                 if (loc != null) FcmManager.sendResponseLocation(loc, batteryPercentages, batteryPlugged);
-                else FcmManager.sendMessage("Získaná poloha == NULL", batteryPercentages, batteryPlugged, MainActivity.tokenTest);
+                else FcmManager.sendMessage("Získaná poloha == NULL", batteryPercentages, batteryPlugged, MainActivity.tokenTest, ACTION_MESSAGE_CODE_NONE);
 
                 stopGps();
                 positionInterval = PrefsUtils.getPrefsLocationInterval(LocationMonitoringService.this);
-
-                //TODO dovymyslet jak zjistit, že GPS bežela před požadavkem na aktuální polohu
-                //aktuálně, po vyžádání aktuální polohy, dojde k vypnutí GPS v každém případě
-                /*
-                if (!gpsIsRunningBeforeMapRequest) {
-                    Log.i(TAG, "LocationMonitoringService - getGivenNumberOfLocations() - GPS před zjištěním polohy neběžela, takže GPS vypnu.");
-                    stopGps();
-                } else {
-                    Log.i(TAG, "LocationMonitoringService - getGivenNumberOfLocations() - GPS před zjištěním polohy běžela, takže GPS se vypínat nebude.");
-                }
-                */
-
-
-
-                //gpsIsRunningBeforeMapRequest = false;
-
                 Intent intent;
 
                 if (loc != null) {
@@ -645,31 +637,9 @@ public class LocationMonitoringService extends Service implements
             }
         };
 
-        //if (PrefsUtils.getPrefsGpsStatus(this)) gpsIsRunningBeforeMapRequest = true;
         onlyGivenNumberOfPositions = true;
-
-        //Zjistim, jestli poslední uložená poloha není mladší než nastavený čas.
-        //Pokud bude mladší, neprovede se nic.
-        //Pokud bude starší, vypnu GPS, dočasně přenastavím interval příjmu poloh a zapnu GPS.
-        if ((new Date().getTime() - lastCheckedPositionTime) > AppConstants.MAX_AGE_OF_LOCATION) {
-            if (positionInterval > AppConstants.LOCATION_DEFAULT_INTERVAL) {
-                if (PrefsUtils.getPrefsGpsStatus(this)) stopGps();
-                positionInterval = AppConstants.LOCATION_DEFAULT_INTERVAL;
-                startGps();
-            }
-        }
-
-        if (positionInterval > AppConstants.LOCATION_DEFAULT_INTERVAL) {
-            if (PrefsUtils.getPrefsGpsStatus(this)) stopGps();
-            positionInterval = AppConstants.LOCATION_DEFAULT_INTERVAL;
-            startGps();
-        }
-
-        if (!PrefsUtils.getPrefsGpsStatus(this)) startGps();
-    }
-
-    public ResultForRequestActualLocation getActualLocationResult() {
-        return this.resultForRequestActualLocation;
+        positionInterval = AppConstants.LOCATION_DEFAULT_INTERVAL;
+        startGps();
     }
 
     private NewLocation getBestAccuracyLocation(ArrayList<NewLocation> locations) {
