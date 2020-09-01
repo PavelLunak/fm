@@ -5,7 +5,7 @@ android {
     compileSdkVersion 26
     defaultConfig {
         applicationId "com.example.fm"
-        minSdkVersion 19
+        minSdkVersion 17
         targetSdkVersion 26
         versionCode 1
         versionName "1.0"
@@ -20,7 +20,7 @@ android {
     }
 }
 
-def AAVersion = '4.6.0'
+def AAVersion = '4.7.0'
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])

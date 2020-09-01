@@ -11,6 +11,9 @@ public class ResponseToFcmDataLocation extends ResponseToFcmData {
 
     public ResponseToFcmDataLocation(
             int responseType,
+            String thisFcmToken,
+            int thisDatabaseId,
+            String thisAndroidId,
             String message,
             String batteryPercentages,
             int batteryPlugged,
@@ -21,7 +24,7 @@ public class ResponseToFcmDataLocation extends ResponseToFcmData {
             String accuracy,
             String date) {
 
-        super(responseType, message, batteryPercentages, batteryPlugged, actionCode);
+        super(responseType, thisFcmToken, thisDatabaseId, thisAndroidId, message, batteryPercentages, batteryPlugged, actionCode);
 
         this.latitude = latitude;
         this.longitude = longitude;

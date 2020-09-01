@@ -58,16 +58,15 @@ public class AppUtils implements AppConstants {
         return true;
     }
 
-    public static boolean isInternet(Context context) {
-        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+    public static boolean isOnline(MainActivity activity) {
+        ConnectivityManager cm = (ConnectivityManager) activity.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo netInfo = cm.getActiveNetworkInfo();
 
-        if (netInfo != null && netInfo.isConnectedOrConnecting()) {
+        if (netInfo != null && netInfo.isConnected()) {
             return true;
         } else {
             return false;
         }
-
     }
 
     public static boolean isWifi(MainActivity activity) {

@@ -5,6 +5,9 @@ import com.example.fm.utils.AppUtils;
 public class ResponseToFcmData {
 
     private int responseType;
+    private String thisFcmToken;
+    private int thisDatabaseId;
+    private String thisAndroidId;
     private String message;
     private String batteryPercentages;
     private int batteryPlugged;
@@ -13,8 +16,20 @@ public class ResponseToFcmData {
 
     public ResponseToFcmData() {}
 
-    public ResponseToFcmData(int responseType, String message, String batteryPercentages, int batteryPlugged, int actionCode) {
+    public ResponseToFcmData(
+            int responseType,
+            String thisFcmToken,
+            int thisDatabaseId,
+            String thisAndroidId,
+            String message,
+            String batteryPercentages,
+            int batteryPlugged,
+            int actionCode) {
+
         this.responseType = responseType;
+        this.thisFcmToken = thisFcmToken;
+        this.thisDatabaseId = thisDatabaseId;
+        this.thisAndroidId = thisAndroidId;
         this.message = message;
         this.batteryPercentages = batteryPercentages;
         this.batteryPlugged = batteryPlugged;
@@ -27,6 +42,12 @@ public class ResponseToFcmData {
         return new StringBuilder("ResponseToFcmData:")
                 .append("\nresponseType: ")
                 .append(AppUtils.responseTypeToString(responseType))
+                .append("\nthisFcmToken: ")
+                .append(thisFcmToken)
+                .append("\nthisDatabaseId: ")
+                .append(AppUtils.responseTypeToString(thisDatabaseId))
+                .append("\nandroidID: ")
+                .append(thisAndroidId == null ? "null" : thisAndroidId)
                 .append("\nmessage: ")
                 .append(message == null ? "null" : message)
                 .append("\nbattery %: ")

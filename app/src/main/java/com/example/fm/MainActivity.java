@@ -55,7 +55,7 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
     public static AppPrefs_ appPrefs;
 
     @InstanceState
-    public static String tokenTest;
+    public static String tokenForResponse, androidIdForResponse;
 
     RelativeLayout root;
 
@@ -64,6 +64,9 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
 
     @InstanceState
     boolean requestingPermissionInProgress;
+
+    @InstanceState
+    boolean requestingRegistrationInProgress;
 
     public boolean hasAllPermissionsGranted = false;
 
@@ -85,7 +88,6 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
         super.onResume();
         Log.i(TAG_DB, "MainActivity - onResume()");
         registerRegistrationReceiver();
-        //registerNewTokenReceiver();
 
         //Během zobrazení dialogu pro udělení oprávnění, projde MainActivity životním cyklem onPause() - onResume().
         //Při odmítnutí některého oprávnění se požadavek na oprávnění zacyklí a dokud nedojde k udělení všech
@@ -102,7 +104,6 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
         super.onPause();
         Log.i(TAG_DB, "MainActivity - onPause()");
         unregisterMessageReceiver();
-        //unregisterNewTokenReceiver();
         hasAllPermissionsGranted = false;
     }
 
@@ -135,13 +136,31 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
         if (!appPrefs.registered().getOr(false)) {
             Log.i(TAG_DB, "MainActivity - checkRegistrationStatus() : is not registered");
 
-            final CountDownTimer timer = new CountDownTimer(20000, 1000) {
+            if (!AppUtils.isOnline(this)) {
+                labelRegistrationStatus.setText("Zařízení není registrováno. Registraci nelze dokončit - není dostupné připojení k internetu.");
+                return;
+            }
+
+            CountDownTimer timer = new CountDownTimer(20000, 1000) {
                 @Override
                 public void onTick(long millisUntilFinished) {
+
+                    if (appPrefs.registered().get()) {
+                        requestingRegistrationInProgress = false;
+                        return;
+                    }
+
                     labelToken.setText("" + millisUntilFinished / 1000);
+
+                    if (requestingRegistrationInProgress) {
+                        Log.i(TAG_DB, "MainActivity - requestingRegistrationInProgress == TRUE -> return");
+                        return;
+                    }
 
                     if (appPrefs.fcmToken().getOr(null) != null) {
                         if (!appPrefs.fcmToken().getOr(null).equals("")) {
+                            requestingRegistrationInProgress = true;
+
                             FcmManager.registerDevice(
                                     MainActivity.this,
                                     new Device(
@@ -160,23 +179,9 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
 
                 @Override
                 public void onFinish() {
-                    if (appPrefs.fcmToken().getOr(null) != null) {
-                        if (!appPrefs.fcmToken().getOr(null).equals("")) {
-                            FcmManager.registerDevice(
-                                    MainActivity.this,
-                                    new Device(
-                                            -1,
-                                            AppUtils.getDeviceName(),
-                                            "",
-                                            appPrefs.fcmToken().get(),
-                                            new DeviceIdentification(appPrefs.androidId().get(), appPrefs.deviceId().get())),
-                                    appPrefs.fcmToken().get());
-                        } else {
-                            Log.i(TAG_DB, "MainActivity - checkRegistrationStatus() : token is empty");
-                        }
-                    } else {
-                        Log.i(TAG_DB, "MainActivity - checkRegistrationStatus() : token is NULL");
-                    }
+                    Log.i(TAG_DB, "MainActivity - registration timer - onFinish()");
+                    requestingRegistrationInProgress = false;
+                    updateRegistrationViews(false);
                 }
             };
 

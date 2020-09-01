@@ -204,9 +204,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
 
                 PrefsUtils.updateAndroidId(MyFirebaseMessagingService.this, di.getAndroidId());
                 PrefsUtils.updateDeviceId(MyFirebaseMessagingService.this, di.getDeviceId());
-
-                //Intent intent = new Intent(ACTION_NEW_TOKEN);
-                //LocalBroadcastManager.getInstance(MyFirebaseMessagingService.this).sendBroadcast(intent);
             }
         });
     }
@@ -236,7 +233,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                     }
 
                     if (data.containsKey(KEY_TOKEN_FOR_RESPONSE)) tokenForResponse = data.get(KEY_TOKEN_FOR_RESPONSE);
-                    MainActivity.tokenTest = tokenForResponse;
+                    MainActivity.tokenForResponse = tokenForResponse;
 
                     Log.i(TAG, "requestType: " + AppUtils.requestTypeToString(requestType));
                     Log.i(TAG, "tokenForResponse: " + tokenForResponse);
@@ -248,7 +245,19 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                         case FCM_REQUEST_TYPE_CANCEL:
                             break;
                         case FCM_REQUEST_TYPE_SERVICE_STATUS:
-                            sendServiceStatus();
+                            if (isMyServiceRunning(LocationMonitoringService.class, "MyFirebaseMessagingService - onMessageReceived()")) {
+                                if (!mBounded) {
+                                    try {
+                                        bindService(new Intent(this, LocationMonitoringService.class), mConnection, BIND_AUTO_CREATE);
+                                    } catch (IllegalArgumentException e) {
+                                        Log.i(TAG, "Nepodařilo se připojit ke službě: " + e.getMessage());
+                                    }
+                                } else {
+                                    sendServiceStatus();
+                                }
+                            } else {
+                                sendServiceStatus();
+                            }
                             break;
                         case FCM_REQUEST_TYPE_SERVICE_START:
                             startService();
@@ -300,6 +309,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                                 sendServiceStatus();
 
                                 FcmManager.sendMessage(
+                                        MyFirebaseMessagingService.this,
                                         "Na zařízení není povolen přístup k poloze.",
                                         batteryPercentages,
                                         batteryPlugged,
@@ -341,15 +351,39 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                                     editor.putInt("locationsIntervalTimeUnit", Integer.parseInt(data.get("locationsIntervalTimeUnit")));
                                 editor.commit();
 
-                                responseData = new ResponseToFcmData(FCM_RESPONSE_TYPE_SETTINGS_DATABASE_SAVED, "Nové nastavení uloženo.", "" + batteryPercentages, batteryPlugged, ACTION_MESSAGE_CODE_NONE);
+                                responseData = new ResponseToFcmData(
+                                        FCM_RESPONSE_TYPE_SETTINGS_DATABASE_SAVED,
+                                        PrefsUtils.getPrefsToken(MyFirebaseMessagingService.this),
+                                        PrefsUtils.getPrefsDatabaseId(MyFirebaseMessagingService.this),
+                                        PrefsUtils.getAndroidId(MyFirebaseMessagingService.this),
+                                        "Nové nastavení uloženo.",
+                                        "" + batteryPercentages,
+                                        batteryPlugged,
+                                        ACTION_MESSAGE_CODE_NONE);
                                 responseToFcm = new ResponseToFcm(tokenForResponse, responseData);
                             } catch (NumberFormatException e) {
                                 e.printStackTrace();
-                                responseData = new ResponseToFcmData(FCM_RESPONSE_TYPE_SETTINGS_DATABASE_SAVE_ERROR, "Chyba při ukládání nastavení - NumberFormatException", "" + batteryPercentages, batteryPlugged, ACTION_MESSAGE_CODE_NONE);
+                                responseData = new ResponseToFcmData(
+                                        FCM_RESPONSE_TYPE_SETTINGS_DATABASE_SAVE_ERROR,
+                                        PrefsUtils.getPrefsToken(MyFirebaseMessagingService.this),
+                                        PrefsUtils.getPrefsDatabaseId(MyFirebaseMessagingService.this),
+                                        PrefsUtils.getAndroidId(MyFirebaseMessagingService.this),
+                                        "Chyba při ukládání nastavení - NumberFormatException",
+                                        "" + batteryPercentages,
+                                        batteryPlugged,
+                                        ACTION_MESSAGE_CODE_NONE);
                                 responseToFcm = new ResponseToFcm(tokenForResponse, responseData);
                             } catch (NullPointerException e) {
                                 e.printStackTrace();
-                                responseData = new ResponseToFcmData(FCM_RESPONSE_TYPE_SETTINGS_DATABASE_SAVE_ERROR, "Chyba při ukládání nastavení - NullPointerException", "" + batteryPercentages, batteryPlugged, ACTION_MESSAGE_CODE_NONE);
+                                responseData = new ResponseToFcmData(
+                                        FCM_RESPONSE_TYPE_SETTINGS_DATABASE_SAVE_ERROR,
+                                        PrefsUtils.getPrefsToken(MyFirebaseMessagingService.this),
+                                        PrefsUtils.getPrefsDatabaseId(MyFirebaseMessagingService.this),
+                                        PrefsUtils.getAndroidId(MyFirebaseMessagingService.this),
+                                        "Chyba při ukládání nastavení - NullPointerException",
+                                        "" + batteryPercentages,
+                                        batteryPlugged,
+                                        ACTION_MESSAGE_CODE_NONE);
                                 responseToFcm = new ResponseToFcm(tokenForResponse, responseData);
                             }
 
@@ -360,6 +394,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                             SharedPreferences sp = this.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
                             responseData = new ResponseToFcmDataSettings(
                                     FCM_RESPONSE_TYPE_SETTINGS_LOADED,
+                                    PrefsUtils.getPrefsToken(MyFirebaseMessagingService.this),
+                                    PrefsUtils.getPrefsDatabaseId(MyFirebaseMessagingService.this),
+                                    PrefsUtils.getAndroidId(MyFirebaseMessagingService.this),
                                     "Nastavení načteno.",
                                     "" + batteryPercentages,
                                     batteryPlugged,
@@ -739,6 +776,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                 m = null;
 
                 FcmManager.sendMessage(
+                        MyFirebaseMessagingService.this,
                         "Alarm v pořádku přehrán",
                         batteryPercentages,
                         batteryPlugged,
@@ -753,6 +791,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                 m = null;
 
                 FcmManager.sendMessage(
+                        MyFirebaseMessagingService.this,
                         "Chyba při přehrávání alarmu",
                         batteryPercentages,
                         batteryPlugged,
@@ -769,6 +808,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
         //audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC), 0);
 
         FcmManager.sendMessage(
+                MyFirebaseMessagingService.this,
                 "Alarm je spuštěn...",
                 batteryPercentages,
                 batteryPlugged,
@@ -783,6 +823,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
         if (simState != TelephonyManager.SIM_STATE_READY) {
 
             FcmManager.sendMessage(
+                    MyFirebaseMessagingService.this,
                     "SIMkarta není připravena. SIMstatus = " + AppUtils.simStateToString(simState),
                     batteryPercentages,
                     batteryPlugged,
@@ -799,6 +840,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                     ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
 
                 FcmManager.sendMessage(
+                        MyFirebaseMessagingService.this,
                         "Aplikace na vzdáleném zařízení nemá oprávnění k telefonním hovorům",
                         batteryPercentages,
                         batteryPlugged,
@@ -809,6 +851,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
         }
 
         FcmManager.sendMessage(
+                MyFirebaseMessagingService.this,
                 "Požadavek na hovor úspěšně doručen. Vyčkej na příchozí hovor!",
                 batteryPercentages,
                 batteryPlugged,
@@ -831,6 +874,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                     ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
 
                 FcmManager.sendMessage(
+                        MyFirebaseMessagingService.this,
                         "Aplikace na vzdáleném zařízení nemá oprávnění k telefonním hovorům",
                         batteryPercentages,
                         batteryPlugged,
@@ -852,7 +896,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
 
     private void sendServiceStatus() {
         boolean isServiceStarted = isMyServiceRunning(LocationMonitoringService.class, "MyFirebaseMessagingService - sendServiceStatus()");
-        //boolean gpsStarted = PrefsUtils.getPrefsGpsStatus(this);
         boolean gpsStarted = false;
 
         if (isServiceStarted)
@@ -860,6 +903,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
 
         ResponseToFcmData responseData = new ResponseToFcmDataServiceStatus(
                 FCM_RESPONSE_SERVICE_STATUS,
+                PrefsUtils.getPrefsToken(MyFirebaseMessagingService.this),
+                PrefsUtils.getPrefsDatabaseId(MyFirebaseMessagingService.this),
+                PrefsUtils.getAndroidId(MyFirebaseMessagingService.this),
                 prepareResponseMessage(),
                 "" + batteryPercentages,
                 batteryPlugged,

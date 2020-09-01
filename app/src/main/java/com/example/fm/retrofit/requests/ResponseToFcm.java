@@ -4,6 +4,7 @@ import com.example.fm.retrofit.objects.ResponseToFcmData;
 
 public class ResponseToFcm {
 
+    //PARAMETRY PRO SERVER FIREBASE!!! NEMĚNIT NÁZVY PROMĚNNÝCH!!!
     private String to;
     private String collapse_key;
     private String priority;

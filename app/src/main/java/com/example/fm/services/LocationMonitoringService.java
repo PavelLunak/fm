@@ -122,8 +122,6 @@ public class LocationMonitoringService extends Service implements
         AppUtils.appendLog("*** LocationMonitoringService - onStartCommand() ***");
         LocalBroadcastManager.getInstance(this).sendBroadcast(new Intent(ACTION_START_SERVICE));
 
-        //Log.i(TAG, "LocationMonitoringService - onStartCommand() : gpsIsRunning == " + PrefsUtils.getPrefsGpsStatus(this));
-
         //Make it stick to the notification panel so it is less prone to get cancelled by the Operating System.
         return START_STICKY;
     }
@@ -132,9 +130,6 @@ public class LocationMonitoringService extends Service implements
     @Override
     public IBinder onBind(Intent intent) {
         AppUtils.appendLog("*** LocationMonitoringService - onBind() ***");
-
-        //Log.i(TAG, "LocationMonitoringService - onBind() : gpsIsRunning == " + PrefsUtils.getPrefsGpsStatus(this));
-
         return mBinder;
     }
 
@@ -262,7 +257,6 @@ public class LocationMonitoringService extends Service implements
             }
         }
 
-        //PrefsUtils.updatePrefsGpsStatus(this,true);
         isGpsRunning = true;
 
         mLocationRequest.setInterval(positionInterval);
@@ -616,10 +610,9 @@ public class LocationMonitoringService extends Service implements
                 onlyGivenNumberOfPositions = false;
                 NewLocation loc = getBestAccuracyLocation(LocationMonitoringService.this.tempLocations) ;
 
-                if (loc != null) FcmManager.sendResponseLocation(loc, batteryPercentages, batteryPlugged);
-                else FcmManager.sendMessage("Získaná poloha == NULL", batteryPercentages, batteryPlugged, MainActivity.tokenTest, ACTION_MESSAGE_CODE_NONE);
+                if (loc != null) FcmManager.sendResponseLocation(LocationMonitoringService.this, loc, batteryPercentages, batteryPlugged);
+                else FcmManager.sendMessage(LocationMonitoringService.this,"Získaná poloha == NULL", batteryPercentages, batteryPlugged, MainActivity.tokenForResponse, ACTION_MESSAGE_CODE_NONE);
 
-                stopGps();
                 positionInterval = PrefsUtils.getPrefsLocationInterval(LocationMonitoringService.this);
                 Intent intent;
 

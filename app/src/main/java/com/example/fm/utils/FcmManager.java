@@ -6,6 +6,7 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.example.fm.MainActivity;
+import com.example.fm.firebase.MyFirebaseMessagingService;
 import com.example.fm.objects.Device;
 import com.example.fm.objects.NewLocation;
 import com.example.fm.retrofit.ApiDatabase;
@@ -72,6 +73,7 @@ public class FcmManager implements AppConstants {
     }
 
     public static void sendMessage(
+            Context context,
             String message,
             int batteryPercentages,
             int batteryPlugged,
@@ -80,6 +82,9 @@ public class FcmManager implements AppConstants {
 
         ResponseToFcmData responseToFcmData = new ResponseToFcmData(
                 FCM_RESPONSE_TYPE_MESSAGE,
+                PrefsUtils.getPrefsToken(context),
+                PrefsUtils.getPrefsDatabaseId(context),
+                PrefsUtils.getAndroidId(context),
                 message,
                 "" + batteryPercentages,
                 batteryPlugged,
@@ -89,9 +94,12 @@ public class FcmManager implements AppConstants {
         sendResponse(response);
     }
 
-    public static void sendResponseLocation(NewLocation newLocation, int batteryPercentages, int batteryPlugged) {
+    public static void sendResponseLocation(Context context, NewLocation newLocation, int batteryPercentages, int batteryPlugged) {
         ResponseToFcmDataLocation responseDataLocation = new ResponseToFcmDataLocation(
                 FCM_RESPONSE_TYPE_LOCATION,
+                PrefsUtils.getPrefsToken(context),
+                PrefsUtils.getPrefsDatabaseId(context),
+                PrefsUtils.getAndroidId(context),
                 "",
                 "" + batteryPercentages,
                 batteryPlugged,
@@ -102,11 +110,12 @@ public class FcmManager implements AppConstants {
                 "" + newLocation.getAccuracy(),
                 "" + newLocation.getDate());
 
-        ResponseToFcm responseToFcm = new ResponseToFcm(MainActivity.tokenTest, responseDataLocation);
+        ResponseToFcm responseToFcm = new ResponseToFcm(MainActivity.tokenForResponse, responseDataLocation);
         FcmManager.sendResponse(responseToFcm);
     }
 
     public static void registerDevice(final Context context, Device device, String newToken) {
+        Log.i(TAG_DB, "FcmManager - registerDevice()");
         ApiDatabase api = ControllerDatabase.getRetrofitInstance().create(ApiDatabase.class);
         final Call<ResponseNewDevice> call = api.addDevice(device);
 
@@ -117,7 +126,7 @@ public class FcmManager implements AppConstants {
                 boolean isRegistered = false;
 
                 if (response.isSuccessful()) {
-                    Log.i(TAG_DB, "isSuccessful == TRUE");
+                    Log.i(TAG_DB, "FcmManager - isSuccessful == TRUE");
                     Log.i(TAG_DB, "CODE: " + response.code());
 
                     /*
@@ -141,7 +150,7 @@ public class FcmManager implements AppConstants {
                         Intent intent = new Intent(ACTION_REGISTRATION);
                         intent.putExtra(EXTRA_REGISTRATION, isRegistered);
                         intent.putExtra(EXTRA_MESSAGE, message);
-                        intent.putExtra(EXTRA_DB_DEVICE_ID, responseNewDevice.getNew_position_id());
+                        intent.putExtra(EXTRA_DB_DEVICE_ID, responseNewDevice.getNewDeviceId());
                         LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
 
                     } else {
@@ -150,7 +159,7 @@ public class FcmManager implements AppConstants {
                         LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
                     }
                 } else {
-                    Log.i(TAG_DB, "isSuccessful == FALSE");
+                    Log.i(TAG_DB, "FcmManager - isSuccessful == FALSE");
 
                     try {
                         Log.i(TAG_DB, response.errorBody().string());
@@ -166,7 +175,7 @@ public class FcmManager implements AppConstants {
 
             @Override
             public void onFailure(Call<ResponseNewDevice> call, Throwable t) {
-                Log.i(TAG_DB, "onFailure()");
+                Log.i(TAG_DB, "FcmManager - onFailure()");
                 Log.i(TAG_DB, t.getMessage());
                 Intent intent = new Intent(ACTION_REGISTRATION);
                 intent.putExtra(EXTRA_REGISTRATION, false);

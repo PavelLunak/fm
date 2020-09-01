@@ -8,6 +8,9 @@ public class ResponseToFcmDataServiceStatus extends ResponseToFcmData {
 
     public ResponseToFcmDataServiceStatus(
             int responseType,
+            String thisFcmToken,
+            int thisDatabaseId,
+            String thisAndroidId,
             String message,
             String batteryPercentages,
             int batteryPlugged,
@@ -15,7 +18,7 @@ public class ResponseToFcmDataServiceStatus extends ResponseToFcmData {
             int serviceStatus,
             int gpsStatus) {
 
-        super(responseType, message, batteryPercentages, batteryPlugged, actionCode);
+        super(responseType, thisFcmToken, thisDatabaseId, thisAndroidId, message, batteryPercentages, batteryPlugged, actionCode);
         this.serviceStatus = serviceStatus;
         this.gpsStatus = gpsStatus;
     }
