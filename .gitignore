@@ -26,6 +26,7 @@ local.properties
 .idea/scopes/scope_settings.xml
 .idea/vcs.xml
 *.iml
+app/google-services.json
 
 # OS-specific files
 .DS_Store
