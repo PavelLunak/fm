@@ -53,7 +53,7 @@ public class ResponseToFcmData {
                 .append("\nbattery %: ")
                 .append(batteryPercentages).append("%")
                 .append("\nbattery status: ")
-                .append(batteryPlugged == 0 ? "NENABÍJÍ SE" : "NANABÍJÍ SE")
+                .append(batteryPlugged == 0 ? "NENABÍJÍ SE" : "NABÍJÍ SE")
                 .toString();
     }
 }

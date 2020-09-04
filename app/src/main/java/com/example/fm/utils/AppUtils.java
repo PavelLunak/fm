@@ -15,10 +15,11 @@ import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Environment;
 import android.provider.Settings;
-import android.support.v4.app.ActivityCompat;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.widget.Toast;
+
+import androidx.core.app.ActivityCompat;
 
 import com.example.fm.MainActivity;
 import com.example.fm.objects.DeviceIdentification;
@@ -76,8 +77,9 @@ public class AppUtils implements AppConstants {
     }
 
     public static void appendLog(String text) {
-        Log.i(TAG, text);
-        if (!MainActivity.canLogInFile) return;
+        Log.d(TAG, "appendLog: " + text);
+
+        //if (!MainActivity.canLogInFile) return;
 
         File directory = new File((Environment.getExternalStorageDirectory().toString()), "GpsUtils");
         File file = new File(
@@ -94,6 +96,7 @@ public class AppUtils implements AppConstants {
             try {
                 file.createNewFile();
             } catch (IOException e) {
+                Log.d(TAG, "WRITE LOG ERROR: " + e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -265,7 +268,7 @@ public class AppUtils implements AppConstants {
 
         float batteryPct = level / (float) scale;
 
-        Log.i(TAG, "battery2: " + ((int) (batteryPct * 100)));
+        Log.d(TAG, "battery2: " + ((int) (batteryPct * 100)));
         return (int) (batteryPct * 100);
     }
 

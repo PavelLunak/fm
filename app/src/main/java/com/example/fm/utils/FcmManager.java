@@ -2,11 +2,11 @@ package com.example.fm.utils;
 
 import android.content.Context;
 import android.content.Intent;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
 import com.example.fm.MainActivity;
-import com.example.fm.firebase.MyFirebaseMessagingService;
 import com.example.fm.objects.Device;
 import com.example.fm.objects.NewLocation;
 import com.example.fm.retrofit.ApiDatabase;
@@ -41,24 +41,11 @@ public class FcmManager implements AppConstants {
         callFcm.enqueue(new Callback<ResponseBody>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                Log.i(TAG, "response code: " + response.code());
-                if (response.isSuccessful()) {
-                    Log.i(TAG, "isSuccessful: TRUE");
-
+                if (!response.isSuccessful()) {
                     try {
-                        Log.i(TAG, "response: " + response.body().string());
+                        AppUtils.appendLog("sendResponse() - CHYBA:");
+                        AppUtils.appendLog(response.errorBody().string());
                     } catch (IOException e) {
-                        Log.i(TAG, "response: IOException: ");
-                        e.printStackTrace();
-                    }
-                } else {
-                    Log.i(TAG, "isSuccessful: FALSE");
-                    //showNotification("error " + response.code() + " " + DateTimeUtils.getDateTime(new Date()));
-
-                    try {
-                        Log.i(TAG, "response: " + response.errorBody().string());
-                    } catch (IOException e) {
-                        Log.i(TAG, "response: IOException: ");
                         e.printStackTrace();
                     }
                 }
@@ -66,8 +53,8 @@ public class FcmManager implements AppConstants {
 
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
-                Log.i(TAG, "onFailure: ");
-                Log.i(TAG, t.getMessage());
+                AppUtils.appendLog("sendResponse() - CHYBA:");
+                AppUtils.appendLog(t.getMessage());
             }
         });
     }
@@ -115,7 +102,7 @@ public class FcmManager implements AppConstants {
     }
 
     public static void registerDevice(final Context context, Device device, String newToken) {
-        Log.i(TAG_DB, "FcmManager - registerDevice()");
+        Log.d(TAG_DB, "FcmManager - registerDevice()");
         ApiDatabase api = ControllerDatabase.getRetrofitInstance().create(ApiDatabase.class);
         final Call<ResponseNewDevice> call = api.addDevice(device);
 
@@ -126,12 +113,12 @@ public class FcmManager implements AppConstants {
                 boolean isRegistered = false;
 
                 if (response.isSuccessful()) {
-                    Log.i(TAG_DB, "FcmManager - isSuccessful == TRUE");
-                    Log.i(TAG_DB, "CODE: " + response.code());
+                    Log.d(TAG_DB, "FcmManager - isSuccessful == TRUE");
+                    Log.d(TAG_DB, "CODE: " + response.code());
 
                     /*
                     try {
-                        Log.i(TAG_DB, response.body().string());
+                        Log.d(TAG_DB, response.body().string());
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -159,10 +146,10 @@ public class FcmManager implements AppConstants {
                         LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
                     }
                 } else {
-                    Log.i(TAG_DB, "FcmManager - isSuccessful == FALSE");
+                    Log.d(TAG_DB, "FcmManager - isSuccessful == FALSE");
 
                     try {
-                        Log.i(TAG_DB, response.errorBody().string());
+                        Log.d(TAG_DB, response.errorBody().string());
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -175,8 +162,8 @@ public class FcmManager implements AppConstants {
 
             @Override
             public void onFailure(Call<ResponseNewDevice> call, Throwable t) {
-                Log.i(TAG_DB, "FcmManager - onFailure()");
-                Log.i(TAG_DB, t.getMessage());
+                Log.d(TAG_DB, "FcmManager - onFailure()");
+                Log.d(TAG_DB, t.getMessage());
                 Intent intent = new Intent(ACTION_REGISTRATION);
                 intent.putExtra(EXTRA_REGISTRATION, false);
                 LocalBroadcastManager.getInstance(context).sendBroadcast(intent);

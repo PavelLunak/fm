@@ -11,32 +11,28 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.NotificationManagerCompat;
-import android.support.v4.content.LocalBroadcastManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
 import com.example.fm.MainActivity;
 import com.example.fm.R;
-import com.example.fm.objects.Device;
 import com.example.fm.objects.DeviceIdentification;
-import com.example.fm.retrofit.ApiDatabase;
 import com.example.fm.retrofit.ApiFcm;
-import com.example.fm.retrofit.ControllerDatabase;
 import com.example.fm.retrofit.ControllerFcm;
 import com.example.fm.retrofit.objects.ResponseToFcmData;
 import com.example.fm.retrofit.objects.ResponseToFcmDataServiceStatus;
 import com.example.fm.retrofit.objects.ResponseToFcmDataSettings;
 import com.example.fm.retrofit.requests.ResponseToFcm;
-import com.example.fm.retrofit.responses.ResponseNewDevice;
 import com.example.fm.services.LocationMonitoringService;
 import com.example.fm.utils.AppConstants;
 import com.example.fm.utils.AppUtils;
@@ -53,12 +49,7 @@ import com.google.firebase.messaging.RemoteMessage;
 import java.io.IOException;
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
-import okhttp3.MediaType;
-import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
-import okio.BufferedSink;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -111,19 +102,19 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
             if (isRequestStartGps) {
                 AppUtils.appendLog("MyFirebaseMessagingService - onServiceConnected() : isRequestStartGps");
                 if (mServiceNew != null) mServiceNew.startGps();
-                else Log.i(TAG, "mServiceNew == null");
+                else Log.d(TAG, "mServiceNew == null");
                 isRequestStartGps = false;
                 sendServiceStatus();
             } else if (isRequestStopGps) {
                 AppUtils.appendLog("MyFirebaseMessagingService - onServiceConnected() : isRequestStopGps");
                 if (mServiceNew != null) mServiceNew.stopGps();
-                else Log.i(TAG, "mServiceNew == null");
+                else Log.d(TAG, "mServiceNew == null");
                 isRequestStopGps = false;
                 sendServiceStatus();
             } else if (isRequestLocation) {
                 AppUtils.appendLog("MyFirebaseMessagingService - onServiceConnected() : isRequestLocation");
                 if (mServiceNew != null) mServiceNew.getActualLocation(REQUIRED_NUMBER_OF_LOCATIONS);
-                else Log.i(TAG, "mServiceNew == null");
+                else Log.d(TAG, "mServiceNew == null");
                 isRequestLocation = false;
             } else if (isRequestKillService) {
                 AppUtils.appendLog("MyFirebaseMessagingService - onServiceConnected() : isRequestKillService");
@@ -188,6 +179,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
     public void onNewToken(String s) {
         super.onNewToken(s);
 
+        Log.d(TAG, "MyFirebaseMessagingService - onNewToken()");
         AppUtils.appendLog("MyFirebaseMessagingService - onNewToken()");
 
         FirebaseInstanceId.getInstance().getInstanceId().addOnSuccessListener(new OnSuccessListener<InstanceIdResult>() {
@@ -195,13 +187,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
             public void onSuccess(final InstanceIdResult instanceIdResult) {
                 String newToken = instanceIdResult.getToken();
                 PrefsUtils.updatePrefsToken(MyFirebaseMessagingService.this, newToken);
-                Log.i(TAG, "new token: " + newToken);
-                Log.i(TAG_DB, "new token: " + newToken);
-
                 DeviceIdentification di = AppUtils.getDeviceIdentification(MyFirebaseMessagingService.this);
-                Log.i(TAG_DB, "MyFirebaseMessagingService - onNewToken() - Android ID: " + di.getAndroidId());
-                Log.i(TAG_DB, "MyFirebaseMessagingService - onNewToken() - Device ID: " + di.getDeviceId());
-
                 PrefsUtils.updateAndroidId(MyFirebaseMessagingService.this, di.getAndroidId());
                 PrefsUtils.updateDeviceId(MyFirebaseMessagingService.this, di.getDeviceId());
             }
@@ -212,8 +198,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
     public void onMessageReceived(RemoteMessage remoteMessage) {
         super.onMessageReceived(remoteMessage);
 
-        Log.i(TAG, "MyFirebaseMessagingService - onMessageReceived");
-
+        AppUtils.appendLog("MyFirebaseMessagingService - onMessageReceived");
         updateBatteryStatus();
 
         if (remoteMessage != null) {
@@ -221,22 +206,14 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
 
             if (data != null) {
                 if (!data.isEmpty()) {
-                    for (Map.Entry<String, String> entry : remoteMessage.getData().entrySet()) {
-                        Log.i(TAG, "key : " + entry.getKey() + ", value : " + entry.getValue());
-                    }
-
                     try {
                         if (data.containsKey(KEY_REQUEST_TYPE)) requestType = Integer.parseInt(data.get(KEY_REQUEST_TYPE));
                     } catch (NumberFormatException e) {
-                        Log.i(TAG, "NumberFormatException: " + e.getMessage());
                         return;
                     }
 
                     if (data.containsKey(KEY_TOKEN_FOR_RESPONSE)) tokenForResponse = data.get(KEY_TOKEN_FOR_RESPONSE);
                     MainActivity.tokenForResponse = tokenForResponse;
-
-                    Log.i(TAG, "requestType: " + AppUtils.requestTypeToString(requestType));
-                    Log.i(TAG, "tokenForResponse: " + tokenForResponse);
 
                     ResponseToFcmData responseData;
                     ResponseToFcm responseToFcm;
@@ -250,7 +227,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                                     try {
                                         bindService(new Intent(this, LocationMonitoringService.class), mConnection, BIND_AUTO_CREATE);
                                     } catch (IllegalArgumentException e) {
-                                        Log.i(TAG, "Nepodařilo se připojit ke službě: " + e.getMessage());
+                                        e.printStackTrace();
                                     }
                                 } else {
                                     sendServiceStatus();
@@ -277,7 +254,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                                         isRequestStartGps = true;
                                         bindService(new Intent(this, LocationMonitoringService.class), mConnection, BIND_AUTO_CREATE);
                                     } catch (IllegalArgumentException e) {
-                                        Log.i(TAG, "Nepodařilo se připojit ke službě: " + e.getMessage());
+                                        Log.d(TAG, "Nepodařilo se připojit ke službě: " + e.getMessage());
                                     }
                                 }
                             } else {
@@ -297,11 +274,11 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                                         isRequestStopGps = true;
                                         bindService(new Intent(this, LocationMonitoringService.class), mConnection, BIND_AUTO_CREATE);
                                     } catch (IllegalArgumentException e) {
-                                        Log.i(TAG, "Nepodařilo se připojit ke službě: " + e.getMessage());
+                                        Log.d(TAG, "Nepodařilo se připojit ke službě: " + e.getMessage());
                                     }
                                 }
                             } else {
-                                Log.i(TAG, "Služba neběží, neběží tedy ani GPS - není co vypnout.");
+                                Log.d(TAG, "Služba neběží, neběží tedy ani GPS - není co vypnout.");
                             }
                             break;
                         case FCM_REQUEST_TYPE_LOCATION:
@@ -324,7 +301,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                                         isRequestLocation = true;
                                         bindService(new Intent(this, LocationMonitoringService.class), mConnection, BIND_AUTO_CREATE);
                                     } catch (IllegalArgumentException e) {
-                                        Log.i(TAG, "Nepodařilo se připojit ke službě: " + e.getMessage());
+                                        Log.d(TAG, "Nepodařilo se připojit ke službě: " + e.getMessage());
                                     }
                                 }
                             } else {
@@ -416,13 +393,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
                             sendCall("+420606289254");
                     }
                 } else {
-                    Log.i(TAG, "remoteMessage.getData().isEmpty()");
+                    Log.d(TAG, "remoteMessage.getData().isEmpty()");
                 }
             } else {
-                Log.i(TAG, "remoteMessage.getData() == null");
+                Log.d(TAG, "remoteMessage.getData() == null");
             }
         } else {
-            Log.i(TAG, "remoteMessage == null");
+            Log.d(TAG, "remoteMessage == null");
         }
     }
 
@@ -440,23 +417,23 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
         callFcm.enqueue(new Callback<ResponseBody>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                Log.i(TAG, "response code: " + response.code());
+                Log.d(TAG, "response code: " + response.code());
                 if (response.isSuccessful()) {
-                    Log.i(TAG, "isSuccessful: TRUE");
+                    Log.d(TAG, "isSuccessful: TRUE");
 
                     try {
-                        Log.i(TAG, "response: " + response.body().string());
+                        Log.d(TAG, "response: " + response.body().string());
                     } catch (IOException e) {
-                        Log.i(TAG, "response: IOException: ");
+                        Log.d(TAG, "response: IOException: ");
                         e.printStackTrace();
                     }
                 } else {
-                    Log.i(TAG, "isSuccessful: FALSE");
+                    Log.d(TAG, "isSuccessful: FALSE");
 
                     try {
-                        Log.i(TAG, "response: " + response.errorBody().string());
+                        Log.d(TAG, "response: " + response.errorBody().string());
                     } catch (IOException e) {
-                        Log.i(TAG, "response: IOException: ");
+                        Log.d(TAG, "response: IOException: ");
                         e.printStackTrace();
                     }
                 }
@@ -464,14 +441,14 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
 
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
-                Log.i(TAG, "onFailure: ");
-                Log.i(TAG, t.getMessage());
+                Log.d(TAG, "onFailure: ");
+                Log.d(TAG, t.getMessage());
             }
         });
     }
 
     public void startService() {
-        Log.i(TAG, "MyFirebaseMessagingService - startService()");
+        Log.d(TAG, "MyFirebaseMessagingService - startService()");
 
         if (!isMyServiceRunning(LocationMonitoringService.class, "MyFirebaseMessagingService - startService()")) {
             mServiceNew = new LocationMonitoringService(getApplicationContext());
@@ -485,48 +462,48 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
     }
 
     public void stopService() {
-        Log.i(TAG, "stopService()");
+        Log.d(TAG, "stopService()");
 
         if (mServiceNew != null) {
-            Log.i(TAG, "stopService() - mServiceNew != null");
+            Log.d(TAG, "stopService() - mServiceNew != null");
             mServiceNew.stopGps();
             mServiceNew.setRequestStopService();
         } else {
-            Log.i(TAG, "stopService() - mServiceNew == null -> nové připojení k service...");
+            Log.d(TAG, "stopService() - mServiceNew == null -> nové připojení k service...");
             isRequestKillService = true;
             bindService(new Intent(this, LocationMonitoringService.class), mConnection, BIND_AUTO_CREATE);
         }
     }
 
     public void killService() {
-        Log.i(TAG, "killService()");
+        Log.d(TAG, "killService()");
 
         if (mConnection != null) {
             if (mBounded) {
                 try {
-                    Log.i(TAG, "killService() - unbindService(mConnection)...");
+                    Log.d(TAG, "killService() - unbindService(mConnection)...");
                     unbindService(mConnection);
                     //PrefsUtils.updatePrefsGpsStatus(this, false);
                 } catch (IllegalArgumentException e) {
-                    Log.i(TAG, "killService() - unbindService(mConnection)... SELHALO");
-                    Log.i(TAG, e.getMessage());
+                    Log.d(TAG, "killService() - unbindService(mConnection)... SELHALO");
+                    Log.d(TAG, e.getMessage());
                 }
             }
         } else {
-            Log.i(TAG, "killService() - mConnection == null");
+            Log.d(TAG, "killService() - mConnection == null");
         }
 
         if (mServiceNew != null) {
             mServiceNew.stopSelf();
         } else {
-            Log.i(TAG, "killService() - mServiceNew == NULL -> nemůžu dát požadavek na stop");
+            Log.d(TAG, "killService() - mServiceNew == NULL -> nemůžu dát požadavek na stop");
         }
 
-        Log.i(TAG, "killService() - is service running : " + isMyServiceRunning(LocationMonitoringService.class, "MyFirebaseMessagingService - killService()"));
+        Log.d(TAG, "killService() - is service running : " + isMyServiceRunning(LocationMonitoringService.class, "MyFirebaseMessagingService - killService()"));
     }
 
     public void startLocationWatcher() {
-        Log.i(TAG, "FirebaseMessagingService - startLocationWatcher()");
+        Log.d(TAG, "FirebaseMessagingService - startLocationWatcher()");
 
         //Check whether this user has installed Google play service which is being used by Location updates.
         if (isGooglePlayServicesAvailable()) {
@@ -534,22 +511,22 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
 
                 /*
                 if (PrefsUtils.getPrefsGpsStatus(this)) {
-                    Log.i(TAG, "FirebaseMessagingService - startLocationWatcher() : GPS již běží, nebudu znova zapínat...");
+                    Log.d(TAG, "FirebaseMessagingService - startLocationWatcher() : GPS již běží, nebudu znova zapínat...");
                     return;
                 }
                 */
 
                 if (!isMyServiceRunning(LocationMonitoringService.class, "FirebaseMessagingService - startLocationWatcher()")) {
-                    Log.i(TAG, "FirebaseMessagingService - startLocationWatcher() - isMyServiceRunning == FALSE -> go start");
+                    Log.d(TAG, "FirebaseMessagingService - startLocationWatcher() - isMyServiceRunning == FALSE -> go start");
                     mServiceNew = new LocationMonitoringService(getApplicationContext());
                     mServiceIntent = new Intent(this, mServiceNew.getClass());
                     startService(mServiceIntent);
                 }
 
                 if (!mBounded) {
-                    Log.i(TAG, "FirebaseMessagingService - startLocationWatcher() - mBounded == FALSE -> go bound");
-                    if (mServiceNew == null) Log.i(TAG, "mServiceNew == null");
-                    if (mConnection == null) Log.i(TAG, "mConnection == null");
+                    Log.d(TAG, "FirebaseMessagingService - startLocationWatcher() - mBounded == FALSE -> go bound");
+                    if (mServiceNew == null) Log.d(TAG, "mServiceNew == null");
+                    if (mConnection == null) Log.d(TAG, "mConnection == null");
 
                     mServiceIntent = new Intent(this, LocationMonitoringService.class);
                     bindService(mServiceIntent, mConnection, BIND_AUTO_CREATE);
@@ -559,15 +536,15 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
 
                 if (mServiceNew != null) mServiceNew.startGps();
             } else {
-                Log.i(TAG, "FirebaseMessagingService - startLocationWatcher() - ERROR - no permissions!");
+                Log.d(TAG, "FirebaseMessagingService - startLocationWatcher() - ERROR - no permissions!");
             }
         } else {
-            Log.i(TAG, "FirebaseMessagingService - startLocationWatcher() - ERROR - no Google play service!");
+            Log.d(TAG, "FirebaseMessagingService - startLocationWatcher() - ERROR - no Google play service!");
         }
     }
 
     public void stopLocationWatcher() {
-        Log.i(TAG, "FirebaseMessagingService - stopLocationWatcher()");
+        Log.d(TAG, "FirebaseMessagingService - stopLocationWatcher()");
         //unregisterLocationReceiver();
 
         if (mServiceNew != null) {
@@ -613,7 +590,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
     }
 
     private void registerRetartServiceReceiver() {
-        Log.i(TAG, "MyFirebaseMessagingService - registerRetartServiceReceiver()");
+        Log.d(TAG, "MyFirebaseMessagingService - registerRetartServiceReceiver()");
 
         restartServiceReceiver = new BroadcastReceiver() {
             @Override
@@ -674,55 +651,55 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
     }
 
     private void unregisterRetartServiceReceiver() {
-        Log.i(TAG, "MyFirebaseMessagingService - unregisterRetartServiceReceiver()");
+        Log.d(TAG, "MyFirebaseMessagingService - unregisterRetartServiceReceiver()");
 
         try {
             LocalBroadcastManager.getInstance(this).unregisterReceiver(restartServiceReceiver);
         } catch (IllegalArgumentException e) {
-            Log.i(TAG, "MyFirebaseMessagingService - unregisterRetartServiceReceiver(): " + e.getMessage());
+            Log.d(TAG, "MyFirebaseMessagingService - unregisterRetartServiceReceiver(): " + e.getMessage());
         }
     }
 
     private void unregisterServiceDestroyedReceiver() {
-        Log.i(TAG, "MyFirebaseMessagingService - unregisterServiceDestroyedReceiver()");
+        Log.d(TAG, "MyFirebaseMessagingService - unregisterServiceDestroyedReceiver()");
 
         try {
             LocalBroadcastManager.getInstance(this).unregisterReceiver(serviceDestroyedReceiver);
         } catch (IllegalArgumentException e) {
-            Log.i(TAG, "MyFirebaseMessagingService - serviceDestroyedReceiver(): " + e.getMessage());
+            Log.d(TAG, "MyFirebaseMessagingService - serviceDestroyedReceiver(): " + e.getMessage());
         }
     }
 
     private void unregisterServiceStartetReceiver() {
-        Log.i(TAG, "MyFirebaseMessagingService - unregisterServiceStartetReceiver()");
+        Log.d(TAG, "MyFirebaseMessagingService - unregisterServiceStartetReceiver()");
 
         try {
             LocalBroadcastManager.getInstance(this).unregisterReceiver(serviceStartetReceiver);
         } catch (IllegalArgumentException e) {
-            Log.i(TAG, "MyFirebaseMessagingService - serviceStartetReceiver(): " + e.getMessage());
+            Log.d(TAG, "MyFirebaseMessagingService - serviceStartetReceiver(): " + e.getMessage());
         }
     }
 
     private void unregisterServiceOnUnbindReceiver() {
-        Log.i(TAG, "MyFirebaseMessagingService - unregisterServiceOnUnbindReceiver()");
+        Log.d(TAG, "MyFirebaseMessagingService - unregisterServiceOnUnbindReceiver()");
 
         try {
             LocalBroadcastManager.getInstance(this).unregisterReceiver(serviceOnUnbindReceiver);
         } catch (IllegalArgumentException e) {
-            Log.i(TAG, "MyFirebaseMessagingService - serviceOnUnbindReceiver(): " + e.getMessage());
+            Log.d(TAG, "MyFirebaseMessagingService - serviceOnUnbindReceiver(): " + e.getMessage());
         }
     }
 
     public boolean isMyServiceRunning(Class<?> serviceClass, String forDebugFrom) {
-        Log.i(TAG, "isMyServiceRunning(), FROM: " + forDebugFrom);
+        Log.d(TAG, "isMyServiceRunning(), FROM: " + forDebugFrom);
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
             if (serviceClass.getName().equals(service.service.getClassName())) {
-                Log.i(TAG, "MyFirebaseMessagingService - isMyServiceRunning() - TRUE");
+                Log.d(TAG, "MyFirebaseMessagingService - isMyServiceRunning() - TRUE");
                 return true;
             }
         }
-        Log.i(TAG, "MyFirebaseMessagingService - isMyServiceRunning() - FALSE");
+        Log.d(TAG, "MyFirebaseMessagingService - isMyServiceRunning() - FALSE");
         return false;
     }
 
@@ -765,7 +742,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
     }
 
     private void playAlarm() {
-        Log.i(TAG, "MyFirebaseMessagingService - playAlarm()");
+        Log.d(TAG, "MyFirebaseMessagingService - playAlarm()");
         if (m != null) return;
         m = MediaPlayer.create(this, R.raw.sirena);
 
@@ -817,7 +794,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
     }
 
     private void sendCall(String pnoneNumber) {
-        Log.i(TAG, "MyFirebaseMessagingService - sendCall()");
+        Log.d(TAG, "MyFirebaseMessagingService - sendCall()");
 
         int simState = getSimState();
         if (simState != TelephonyManager.SIM_STATE_READY) {
@@ -864,7 +841,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
     }
 
     private int getSimState() {
-        Log.i(TAG, "MyFirebaseMessagingService - getSimState()");
+        Log.d(TAG, "MyFirebaseMessagingService - getSimState()");
 
         TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
 
@@ -885,7 +862,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
             }
         }
 
-        Log.i(TAG, "MyFirebaseMessagingService - getSimState() : SIMstate = " + tm.getSimState());
+        Log.d(TAG, "MyFirebaseMessagingService - getSimState() : SIMstate = " + tm.getSimState());
         return tm.getSimState();
     }
 
@@ -898,8 +875,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService impleme
         boolean isServiceStarted = isMyServiceRunning(LocationMonitoringService.class, "MyFirebaseMessagingService - sendServiceStatus()");
         boolean gpsStarted = false;
 
-        if (isServiceStarted)
+        if (isServiceStarted) {
             if (mServiceNew != null) gpsStarted = mServiceNew.getGpsStatus();
+        }
 
         ResponseToFcmData responseData = new ResponseToFcmDataServiceStatus(
                 FCM_RESPONSE_SERVICE_STATUS,

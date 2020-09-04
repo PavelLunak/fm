@@ -8,15 +8,15 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.CountDownTimer;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.LocalBroadcastManager;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.ProgressBar;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.example.fm.interfaces.AppPrefs_;
 import com.example.fm.objects.Device;
@@ -57,8 +57,6 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
     @InstanceState
     public static String tokenForResponse, androidIdForResponse;
 
-    RelativeLayout root;
-
     @InstanceState
     public static boolean canLogInFile;
 
@@ -76,17 +74,12 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Log.i(TAG_DB, "MainActivity - onCreate()");
         initStetho();
-
-        DeviceIdentification di = AppUtils.getDeviceIdentification(this);
-        Log.i(TAG_DB, "MainActivity - onCreate() - android ID: " + di.getAndroidId() + "\nMainActivity - onCreate() - device ID: " + di.getDeviceId());
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        Log.i(TAG_DB, "MainActivity - onResume()");
         registerRegistrationReceiver();
 
         //Během zobrazení dialogu pro udělení oprávnění, projde MainActivity životním cyklem onPause() - onResume().
@@ -102,15 +95,8 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
     @Override
     protected void onPause() {
         super.onPause();
-        Log.i(TAG_DB, "MainActivity - onPause()");
         unregisterMessageReceiver();
         hasAllPermissionsGranted = false;
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        Log.i(TAG_DB, "MainActivity - onStop()");
     }
 
     @AfterViews
@@ -123,20 +109,14 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
                 appPrefs.androidId().getOr("?"),
                 appPrefs.deviceId().getOr("?"),
                 appPrefs.databaseId().getOr(-1));
-
-
-        Log.i(TAG, AppUtils.getDeviceName());
-        Log.i(TAG, PrefsUtils.getPrefsToken(this));
-        Log.i(TAG, "Registrováno: " + PrefsUtils.getPrefsTokenRegistrationStatus(this));
     }
 
     private void checkRegistrationStatus() {
-        Log.i(TAG_DB, "MainActivity - checkRegistrationStatus()");
-
         if (!appPrefs.registered().getOr(false)) {
-            Log.i(TAG_DB, "MainActivity - checkRegistrationStatus() : is not registered");
+            Log.d(TAG, "Zařízení není registrováno");
 
             if (!AppUtils.isOnline(this)) {
+                Log.d(TAG, "Zařízení není online");
                 labelRegistrationStatus.setText("Zařízení není registrováno. Registraci nelze dokončit - není dostupné připojení k internetu.");
                 return;
             }
@@ -153,33 +133,32 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
                     labelToken.setText("" + millisUntilFinished / 1000);
 
                     if (requestingRegistrationInProgress) {
-                        Log.i(TAG_DB, "MainActivity - requestingRegistrationInProgress == TRUE -> return");
                         return;
                     }
 
-                    if (appPrefs.fcmToken().getOr(null) != null) {
-                        if (!appPrefs.fcmToken().getOr(null).equals("")) {
-                            requestingRegistrationInProgress = true;
+                    String token = appPrefs.fcmToken().getOr("");
+                    Log.d(TAG, "TOKEN: " + appPrefs.fcmToken().getOr("null"));
 
-                            FcmManager.registerDevice(
-                                    MainActivity.this,
-                                    new Device(
-                                            -1,
-                                            AppUtils.getDeviceName(),
-                                            "",
-                                            appPrefs.fcmToken().get(),
-                                            new DeviceIdentification(appPrefs.androidId().get(), appPrefs.deviceId().get())),
-                                    appPrefs.fcmToken().get());
-                            this.cancel();
-                        } else {
-                            Log.i(TAG_DB, "MainActivity - checkRegistrationStatus() : token is empty");
-                        }
+                    if (!token.equals("")) {
+                        requestingRegistrationInProgress = true;
+
+                        AppUtils.appendLog("Registrace zařízení...");
+
+                        FcmManager.registerDevice(
+                                MainActivity.this,
+                                new Device(
+                                        -1,
+                                        AppUtils.getDeviceName(),
+                                        "",
+                                        appPrefs.fcmToken().get(),
+                                        new DeviceIdentification(appPrefs.androidId().get(), appPrefs.deviceId().get())),
+                                appPrefs.fcmToken().get());
+                        this.cancel();
                     }
                 }
 
                 @Override
                 public void onFinish() {
-                    Log.i(TAG_DB, "MainActivity - registration timer - onFinish()");
                     requestingRegistrationInProgress = false;
                     updateRegistrationViews(false);
                 }
@@ -188,7 +167,9 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
             updateRegistrationViews(true);
             timer.start();
         } else {
-            Log.i(TAG_DB, "MainActivity - checkRegistrationStatus() : is registered");
+            Log.d(TAG, "Zařízení je registrováno");
+            Log.d(TAG, "TOKEN: " + appPrefs.fcmToken().getOr("null"));
+            updateRegistrationViews(false);
         }
     }
 
@@ -201,8 +182,6 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
     }
 
     public void checkPermission() {
-        Log.i(TAG_DB, "MainActivity - checkPermission()");
-
         requestingPermissionInProgress = true;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -219,13 +198,9 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
                 permissionsToGrant.add(Manifest.permission.ACCESS_COARSE_LOCATION);
 
             if (!permissionsToGrant.isEmpty()) {
-
-                Log.i(TAG_DB, "MainActivity - checkPermission() - item to request permission:");
-
                 String[] asArray = new String[permissionsToGrant.size()];
                 for (int i = 0, count = permissionsToGrant.size(); i < count; i ++) {
                     asArray[i] = permissionsToGrant.get(i);
-                    Log.i(TAG_DB, "" + asArray[i]);
                 }
 
                 ActivityCompat.requestPermissions(
@@ -243,32 +218,20 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        Log.i(TAG_DB, "MainActivity - onRequestPermissionsResult()");
-
         switch (requestCode) {
             case PERMISSION_REQUEST_CODE: {
                 if (grantResults.length > 0) {
                     hasAllPermissionsGranted = true;
 
-                    Log.i(TAG_DB, "MainActivity - onRequestPermissionsResult() - permissions:");
-                    for (String s : permissions) {
-                        Log.i(TAG_DB, "" + s);
-                    }
-
                     for (int i = 0, count = grantResults.length; i < count; i ++) {
                         if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
                             hasAllPermissionsGranted = false;
-                            Log.i(TAG_DB, "DENIED");
-                        } else {
-                            Log.i(TAG_DB, "GRANTED");
                         }
                     }
 
                     if (hasAllPermissionsGranted) {
-                        Log.i(TAG_DB, "hasAllPermissionsGranted == TRUE");
                         checkRegistrationStatus();
                     } else {
-                        Log.i(TAG_DB, "hasAllPermissionsGranted == FALSE");
                         labelRegistrationStatus.setText("Nemůžu registrovat zařízení, dokud nebudou udělena všechna potřebná oprávnění");
                         labelRegistrationStatus.setOnClickListener(new View.OnClickListener() {
                             @Override
@@ -284,11 +247,9 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
     }
 
     public void registerRegistrationReceiver() {
-        Log.i(TAG_DB, "MainActivity - registerRegistrationReceiver()");
         registrationReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                Log.i(TAG_DB, "registrationReceiver - onReceive()");
 
                 updateRegistrationViews(false);
 
@@ -312,6 +273,8 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
                         appPrefs.androidId().getOr("?"),
                         appPrefs.deviceId().getOr("?"),
                         appPrefs.databaseId().getOr(-1));
+
+                AppUtils.appendLog("Zařízení registrováno...");
             }
         };
 
@@ -319,7 +282,6 @@ public class MainActivity extends AppCompatActivity implements AppConstants {
     }
 
     private void unregisterMessageReceiver() {
-        Log.i(TAG_DB, "MainActivity - unregisterMessageReceiver()");
         try {
             LocalBroadcastManager.getInstance(this).unregisterReceiver(registrationReceiver);
         } catch (IllegalArgumentException e) {

@@ -12,11 +12,12 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.Looper;
-import android.support.annotation.Nullable;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
+
+import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.example.fm.MainActivity;
 import com.example.fm.listeners.OnOuterDatabaseChangedListener;
@@ -173,7 +174,7 @@ public class LocationMonitoringService extends Service implements
 
         if (counter == Integer.MAX_VALUE) counter = 0;
         counter ++;
-        Log.i(TAG, "counter = " + counter);
+        Log.d(TAG, "counter = " + counter);
 
         if (location == null) {
             AppUtils.appendLog("LocationMonitoringService - onLocationChanged() -> location == NULL");
@@ -193,28 +194,29 @@ public class LocationMonitoringService extends Service implements
 
         this.lastCheckedPositionTime = new Date().getTime();
 
-        Log.i(TAG, "LocationMonitoringService - onLocationChanged() - accuracy: " + this.newLocation.getAccuracy());
-        Log.i(TAG, "LocationMonitoringService - onLocationChanged() - latitude: " + this.newLocation.getLatitude());
-        Log.i(TAG, "LocationMonitoringService - onLocationChanged() - longitude: " + this.newLocation.getLongitude());
-        Log.i(TAG, "LocationMonitoringService - onLocationChanged() - lastUpdate: " + this.newLocation.getDate());
-        Log.i(TAG, "LocationMonitoringService - onLocationChanged() - battery percentages: " + this.newLocation.getBatteryPercentages());
-        Log.i(TAG, "LocationMonitoringService - onLocationChanged() - battery plugged: " + (this.newLocation.getBatterStatus() == 0 ? "Nenabíjí se" : "Nabíjí se") + " ("+ this.newLocation.getBatterStatus() + ")");
+        Log.d(TAG, "LocationMonitoringService - onLocationChanged() - accuracy: " + this.newLocation.getAccuracy());
+        Log.d(TAG, "LocationMonitoringService - onLocationChanged() - latitude: " + this.newLocation.getLatitude());
+        Log.d(TAG, "LocationMonitoringService - onLocationChanged() - longitude: " + this.newLocation.getLongitude());
+        Log.d(TAG, "LocationMonitoringService - onLocationChanged() - lastUpdate: " + this.newLocation.getDate());
+        Log.d(TAG, "LocationMonitoringService - onLocationChanged() - battery percentages: " + this.newLocation.getBatteryPercentages());
+        Log.d(TAG, "LocationMonitoringService - onLocationChanged() - battery plugged: " + (this.newLocation.getBatterStatus() == 0 ? "Nenabíjí se" : "Nabíjí se") + " ("+ this.newLocation.getBatterStatus() + ")");
 
         if (onlyGivenNumberOfPositions) {
-            Log.i(TAG, "POUZE URČENÝ POČET POLOH == TRUE");
+            Log.d(TAG, "POUZE URČENÝ POČET POLOH == TRUE");
             if (tempLocations == null) tempLocations = new ArrayList<>();
             tempLocations.add(newLocation);
 
             if (tempLocations.size() >= REQUIRED_NUMBER_OF_LOCATIONS) {
                 if (this.listener != null) this.listener.onGivenLocationsChecked();
             }
+
             return;
         }
 
         savingToDatabaseEnabled = PrefsUtils.getPrefsDatabaseEnabled(this);
 
-        Log.i(TAG, "savingToDatabaseEnabled : " + savingToDatabaseEnabled);
-        Log.i(TAG, "isSavingDataToExternalDatabase : " + isSavingDataToExternalDatabase);
+        Log.d(TAG, "savingToDatabaseEnabled : " + savingToDatabaseEnabled);
+        Log.d(TAG, "isSavingDataToExternalDatabase : " + isSavingDataToExternalDatabase);
 
         if (savingToDatabaseEnabled && !isSavingDataToExternalDatabase) {
             if (checkTimeIntervalForSavePositionToDatabase()) {
@@ -222,13 +224,13 @@ public class LocationMonitoringService extends Service implements
                     if (checkMaxCountOfLocations()) {
                         saveLocationToDb();
                     } else {
-                        Log.i(TAG, "> maxCount");
+                        Log.d(TAG, "> maxCount");
                     }
                 } else {
-                    Log.i(TAG, "hasDataToSend == FALSE");
+                    Log.d(TAG, "hasDataToSend == FALSE");
                 }
             } else {
-                Log.i(TAG, "< INTERVAL");
+                Log.d(TAG, "< INTERVAL");
             }
         }
     }
@@ -273,7 +275,8 @@ public class LocationMonitoringService extends Service implements
         };
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        fusedLocationClient.requestLocationUpdates(mLocationRequest,
+        fusedLocationClient.requestLocationUpdates(
+                mLocationRequest,
                 mLocationCallback,
                 Looper.getMainLooper());
     }
@@ -286,7 +289,7 @@ public class LocationMonitoringService extends Service implements
         if (fusedLocationClient != null) {
             fusedLocationClient.removeLocationUpdates(mLocationCallback);
         } else {
-            Log.i(TAG, "stopGps() : fusedLocationClient == null");
+            Log.d(TAG, "stopGps() : fusedLocationClient == null");
         }
     }
 
@@ -295,7 +298,7 @@ public class LocationMonitoringService extends Service implements
     }
 
     public void setRequestStopService() {
-        Log.i(TAG, "LocationMonitoringService - setRequestStopService()");
+        Log.d(TAG, "LocationMonitoringService - setRequestStopService()");
         isStopRequest = true;
         stopGps();
     }
@@ -315,15 +318,15 @@ public class LocationMonitoringService extends Service implements
     }
 
     public RequestSendPositionsToDB prepareDataForDatabase() {
-        Log.i(TAG, "prepareDataForDatabase()");
+        Log.d(TAG, "prepareDataForDatabase()");
 
         if (autoSaveBuffer == null) {
-            Log.i(TAG, "autoSaveBuffer == null");
+            Log.d(TAG, "autoSaveBuffer == null");
             return null;
         }
 
         if (autoSaveBuffer.isEmpty()) {
-            Log.i(TAG, "autoSaveBuffer.isEmpty()");
+            Log.d(TAG, "autoSaveBuffer.isEmpty()");
             return null;
         }
 
@@ -356,7 +359,7 @@ public class LocationMonitoringService extends Service implements
     //Pokud ne, nic nepřidá a vrátí FALSE
     private boolean checkTimeIntervalForSavePositionToDatabase() {
         autoCheckedPositionSavingInterval = PrefsUtils.getPrefsLocationsAutoCheckedInterval(this);
-        if (autoCheckedPositionSavingInterval == 0) autoCheckedPositionSavingInterval = 10000;
+        if (autoCheckedPositionSavingInterval == 0) autoCheckedPositionSavingInterval = 180000;
 
         long time = new Date().getTime();
         long difference = time - this.lastAutoSaveToDb;
@@ -421,13 +424,13 @@ public class LocationMonitoringService extends Service implements
     public void sendCheckedPositionsToDatabase(final OnOuterDatabaseChangedListener listener) {
 
         AppUtils.appendLog("MainActivity.sendCheckedPositionsToDatabase()");
-        Log.i("testovani", "Odeslání dat do externí databáze");
+        Log.d("testovani", "Odeslání dat do externí databáze");
 
         final RequestSendPositionsToDB request = prepareDataForDatabase();
 
         if (request == null) {
             AppUtils.appendLog("RequestSendPositionsToDB == NULL ---> return");
-            Log.i("testovani", "request == null");
+            Log.d("testovani", "request == null");
             return;
         } else {
             AppUtils.appendLog("RequestSendPositionsToDB.itemsCount : " + request.getItems().size());
@@ -455,15 +458,15 @@ public class LocationMonitoringService extends Service implements
         call.enqueue(new Callback<ResponseSendPositionsIntoDatabase>() {
             @Override
             public void onResponse(Call<ResponseSendPositionsIntoDatabase> call, Response<ResponseSendPositionsIntoDatabase> response) {
-                Log.i("testovani", "onResponse()");
+                Log.d("testovani", "onResponse()");
                 if (response.isSuccessful()) {
                     AppUtils.appendLog("response.isSuccessful() CODE : " + response.code());
-                    Log.i("testovani", "isSuccessful - CODE: " + response.code());
+                    Log.d("testovani", "isSuccessful - CODE: " + response.code());
 
                     /*
                     ResponseBody responseBody = response.body();
                     try {
-                        Log.i("testovani", "isSuccessful - CODE: " + responseBody.string());
+                        Log.d("testovani", "isSuccessful - CODE: " + responseBody.string());
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -473,31 +476,31 @@ public class LocationMonitoringService extends Service implements
                     List<Integer> savedPositionsIds = apiResponse.getSaved_positions_ids();
                     List<String> messagesFromApi = apiResponse.getMessages();
 
-                    Log.i("testovani", "Vložená ID :");
+                    Log.d("testovani", "Vložená ID :");
                     StringBuilder sb = new StringBuilder("Vložená ID do databáze : ");
                     for (Integer i : savedPositionsIds) {
-                        Log.i("testovani", "ID: " + i);
+                        Log.d("testovani", "ID: " + i);
                         sb.append(i);
                         sb.append(" ");
                     }
                     AppUtils.appendLog(sb.toString());
 
-                    Log.i("testovani", "Chybové zprávy :");
+                    Log.d("testovani", "Chybové zprávy :");
                     sb = new StringBuilder("Zprávy z API : ");
                     if (messagesFromApi == null) {
-                        Log.i("testovani", "Messages == NULL");
+                        Log.d("testovani", "Messages == NULL");
                         sb.append("Messages == NULL");
                         //DialogInfo.createDialog(MainActivity.this).setTitle("Info").setMessage("Polohy úspěšně vloženy do databáze").show();
                     } else {
                         if (!messagesFromApi.isEmpty()) {
                             for (String s : messagesFromApi) {
-                                Log.i("testovani", "Message: " + s);
+                                Log.d("testovani", "Message: " + s);
                                 sb.append(s);
                                 sb.append("\n");
                             }
                         } else {
                             //DialogInfo.createDialog(MainActivity.this).setTitle("Info").setMessage("Polohy úspěšně vloženy do databáze").show();
-                            Log.i("testovani", "Messages isEmpty");
+                            Log.d("testovani", "Messages isEmpty");
                             sb.append("Messages isEmpty");
                         }
                     }
@@ -508,7 +511,7 @@ public class LocationMonitoringService extends Service implements
                     }
                 } else {
                     AppUtils.appendLog("!response.isSuccessful() CODE : " + response.code());
-                    Log.i("testovani", "CHYBA 2");
+                    Log.d("testovani", "CHYBA 2");
 
                     if (listener != null) {
                         listener.onOuterDatabaseChanged(SAVING_INTO_EXTERNAL_DB_RESULT_FAILURE);
@@ -518,8 +521,8 @@ public class LocationMonitoringService extends Service implements
 
             @Override
             public void onFailure(Call<ResponseSendPositionsIntoDatabase> call, Throwable t) {
-                Log.i("testovani", "onFailure()");
-                Log.i("testovani", t.getMessage());
+                Log.d("testovani", "onFailure()");
+                Log.d("testovani", t.getMessage());
 
                 AppUtils.appendLog("response.onFailure()");
                 AppUtils.appendLog("message : " + t.getMessage());
@@ -600,13 +603,14 @@ public class LocationMonitoringService extends Service implements
 
     // countOfLocations - počet poloh, které se zjistí a z nich se vybere ta s největší přesností
     public void getActualLocation(int countOfLocations) {
-        Log.i(TAG, "LocationMonitoringService - getActualLocation(" + countOfLocations + ")");
+        Log.d(TAG, "LocationMonitoringService - getActualLocation(" + countOfLocations + ")");
 
         this.listener = new OnGivenLocationsCheckedListener() {
             @Override
             public void onGivenLocationsChecked() {
-                Log.i(TAG, "LocationMonitoringService - OnGivenLocationsCheckedListener - onGivenLocationsChecked()");
+                Log.d(TAG, "LocationMonitoringService - OnGivenLocationsCheckedListener - onGivenLocationsChecked()");
 
+                stopGps();
                 onlyGivenNumberOfPositions = false;
                 NewLocation loc = getBestAccuracyLocation(LocationMonitoringService.this.tempLocations) ;
 
@@ -636,17 +640,21 @@ public class LocationMonitoringService extends Service implements
     }
 
     private NewLocation getBestAccuracyLocation(ArrayList<NewLocation> locations) {
-        Log.i(TAG, "LocationMonitoringService - getBestAccuracyLocation()");
-        if (locations == null) Log.i(TAG, "LocationMonitoringService - getBestAccuracyLocation() : locations == null");
-        if (locations == null) return null;
+        Log.d(TAG, "LocationMonitoringService - getBestAccuracyLocation()");
+        if (locations == null) {
+            Log.d(TAG, "LocationMonitoringService - getBestAccuracyLocation() : locations == null");
+            return null;
+        }
 
-        if (locations.isEmpty()) Log.i(TAG, "LocationMonitoringService - getBestAccuracyLocation() : locations.isEmpty()");
-        if (locations.isEmpty()) return null;
+        if (locations.isEmpty()) {
+            Log.d(TAG, "LocationMonitoringService - getBestAccuracyLocation() : locations.isEmpty()");
+            return null;
+        }
 
         NewLocation toReturn = null;
 
         for (NewLocation nl : locations) {
-            Log.i(TAG, "LocationMonitoringService - getBestAccuracyLocation() - iterate - accuracy : " + nl.getAccuracy());
+            Log.d(TAG, "LocationMonitoringService - getBestAccuracyLocation() - iterate - accuracy : " + nl.getAccuracy());
             if (toReturn == null) {
                 toReturn = nl;
                 continue;
@@ -655,7 +663,7 @@ public class LocationMonitoringService extends Service implements
             if (nl.getAccuracy() < toReturn.getAccuracy()) toReturn = nl;
         }
 
-        Log.i(TAG, "LocationMonitoringService - getBestAccuracyLocation() - toReturn accuracy : " + toReturn.getAccuracy());
+        Log.d(TAG, "LocationMonitoringService - getBestAccuracyLocation() - toReturn accuracy : " + toReturn.getAccuracy());
         return toReturn;
     }
 

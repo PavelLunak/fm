@@ -108,7 +108,7 @@ public class DateTimeUtils {
     }
 
     public static String getDateTimeForLog(long date) {
-        SimpleDateFormat sdf1 = new SimpleDateFormat("YYYY_MM_dd");
+        SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy_MM_dd");
         return sdf1.format(new Date(date));
     }
 
